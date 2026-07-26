@@ -66,38 +66,38 @@ public abstract class AppDatabase extends RoomDatabase {
             });
         }
 
-        private void insertDefaultData(TimerDao dao, Context context) {
+        private void insertDefaultData(TimerDao dao, Context appContext) {
             Timer sourdough = new Timer(
-                    context.getString(R.string.default_timer_sourdough_title),
-                    context.getString(R.string.default_timer_sourdough_desc));
+                    appContext.getString(R.string.default_timer_sourdough_title),
+                    appContext.getString(R.string.default_timer_sourdough_desc));
             long id = dao.insertTimer(sourdough);
             dao.insertTimerStep(new TimerStep(id,
-                    context.getString(R.string.default_step_feeding_title),
-                    context.getString(R.string.default_step_feeding_desc),
+                    appContext.getString(R.string.default_step_feeding_title),
+                    appContext.getString(R.string.default_step_feeding_desc),
                     4 * 60 * 60, 0));
             dao.insertTimerStep(new TimerStep(id,
-                    context.getString(R.string.default_step_resting1_title),
-                    context.getString(R.string.default_step_resting1_desc),
+                    appContext.getString(R.string.default_step_resting1_title),
+                    appContext.getString(R.string.default_step_resting1_desc),
                     3 * 60 * 60, 1));
             dao.insertTimerStep(new TimerStep(id,
-                    context.getString(R.string.default_step_resting2_title),
-                    context.getString(R.string.default_step_resting2_desc),
+                    appContext.getString(R.string.default_step_resting2_title),
+                    appContext.getString(R.string.default_step_resting2_desc),
                     30 * 60 * 60, 2));
             dao.insertTimerStep(new TimerStep(id,
-                    context.getString(R.string.default_step_preheat_title),
-                    context.getString(R.string.default_step_preheat_desc),
+                    appContext.getString(R.string.default_step_preheat_title),
+                    appContext.getString(R.string.default_step_preheat_desc),
                     30 * 60 * 60, 3));
             dao.insertTimerStep(new TimerStep(id,
-                    context.getString(R.string.default_step_baking1_title),
-                    context.getString(R.string.default_step_baking1_desc),
+                    appContext.getString(R.string.default_step_baking1_title),
+                    appContext.getString(R.string.default_step_baking1_desc),
                     10 * 60, 4));
             dao.insertTimerStep(new TimerStep(id,
-                    context.getString(R.string.default_step_baking2_title),
-                    context.getString(R.string.default_step_baking2_desc),
+                    appContext.getString(R.string.default_step_baking2_title),
+                    appContext.getString(R.string.default_step_baking2_desc),
                     20 * 60, 5));
             dao.insertTimerStep(new TimerStep(id,
-                    context.getString(R.string.default_step_baking3_title),
-                    context.getString(R.string.default_step_baking3_desc),
+                    appContext.getString(R.string.default_step_baking3_title),
+                    appContext.getString(R.string.default_step_baking3_desc),
                     35 * 60, 6));
         }
     }
