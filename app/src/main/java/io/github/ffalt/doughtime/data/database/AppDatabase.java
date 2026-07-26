@@ -12,12 +12,11 @@ import io.github.ffalt.doughtime.data.entity.TimerStep;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.Locale;
 
 import androidx.annotation.NonNull;
 import androidx.sqlite.db.SupportSQLiteDatabase;
 
-@Database(entities = {Timer.class, TimerStep.class}, version = 3)
+@Database(entities = {Timer.class, TimerStep.class}, version = 3, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
     public abstract TimerDao timerDao();
 
@@ -61,15 +60,15 @@ public abstract class AppDatabase extends RoomDatabase {
         }
 
         private void insertDefaultData(TimerDao dao) {
-            Timer sourdough = new Timer("Sauerteg", "Standard sourdough process");
+            Timer sourdough = new Timer("Sourdough", "Standard sourdough process");
             long id = dao.insertTimer(sourdough);
-            dao.insertTimerStep(new TimerStep(id, "Fütterung", "Fütter deinen Starter-Teig", 4 * 60 * 60, 0));
-            dao.insertTimerStep(new TimerStep(id, "Teigruhe", "Teig gehen lassen", 3 * 60 * 60, 1));
-            dao.insertTimerStep(new TimerStep(id, "Teigruhe 2", "Wenn nötig Teig weiter gehen lassen", 30 * 60 * 60, 2));
-            dao.insertTimerStep(new TimerStep(id, "Vorheizen", "Ofen auf 250 Grad vorheizen", 30 * 60 * 60, 3));
-            dao.insertTimerStep(new TimerStep(id, "Backen Phase 1", "Backen mit Deckel 250 Grad", 10 * 60, 4));
-            dao.insertTimerStep(new TimerStep(id, "Backen Phase 2", "Backen 220 Grad", 20 * 60, 5));
-            dao.insertTimerStep(new TimerStep(id, "Backen Phase 3", "Backen bei 200 Grad", 35 * 60, 6));
+            dao.insertTimerStep(new TimerStep(id, "Feeding", "Feed your starter dough", 4 * 60 * 60, 0));
+            dao.insertTimerStep(new TimerStep(id, "Resting Time 1", "Let the dough rest", 3 * 60 * 60, 1));
+            dao.insertTimerStep(new TimerStep(id, "Resting Time 2", "If necessary, let the dough rest further", 30 * 60 * 60, 2));
+            dao.insertTimerStep(new TimerStep(id, "Preheat", "Preheat the oven to 250 degrees", 30 * 60 * 60, 3));
+            dao.insertTimerStep(new TimerStep(id, "Baking Phase 1", "Bake with lid at 250 degrees", 10 * 60, 4));
+            dao.insertTimerStep(new TimerStep(id, "Baking Phase 2", "Bake at 220 degrees", 20 * 60, 5));
+            dao.insertTimerStep(new TimerStep(id, "Baking Phase 3", "Bake at 200 degrees", 35 * 60, 6));
         }
     };
 }
