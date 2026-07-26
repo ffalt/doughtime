@@ -5,7 +5,6 @@ import se.bjurr.gitchangelog.plugin.gradle.GitChangelogTask
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.gitChangelog)
-    alias(libs.plugins.grGit)
 }
 
 subprojects {
@@ -161,7 +160,12 @@ tasks.register('gitChangelogTask', GitChangelogTask) {
 
 tasks.register('bumpReleaseVersion') {
     doLast {
-        if (!grgit.status().clean) {
+        def statusOut = new ByteArrayOutputStream()
+        exec {
+            commandLine 'git', 'status', '--porcelain'
+            standardOutput = statusOut
+        }
+        if (!statusOut.toString().trim().isEmpty()) {
             throw new GradleException('Git repository is dirty. Commit your changes first!')
         }
 
@@ -178,9 +182,13 @@ tasks.register('bumpReleaseVersion') {
         propsFile.text = propsText
 
         // commit
-        grgit.add(patterns: ['gradle.properties'])
-        grgit.commit(message: "Bump version to ${nextVersion}", sign: false)
-        // sign commit
+        exec {
+            commandLine 'git', 'add', 'gradle.properties'
+        }
+        exec {
+            commandLine 'git', 'commit', '-m', "Bump version to ${nextVersion}", '--no-gpg-sign'
+        }
+        // sign commit if needed or just use -s
         exec {
             commandLine 'git', 'commit', '--amend', '--no-edit', '--allow-empty', '-s'
         }
@@ -190,7 +198,9 @@ tasks.register('bumpReleaseVersion') {
 tasks.register('prepareReleaseTag') {
     doLast {
         println("Adding temp tag ${project.version}")
-        grgit.tag.add(name: project.version)
+        exec {
+            commandLine 'git', 'tag', project.version
+        }
     }
 }
 
@@ -200,7 +210,9 @@ tasks.register('release') {
     doLast {
         println("Releasing ${project.version}")
         // remove temp tag
-        grgit.tag.remove(names: [project.version])
+        exec {
+            commandLine 'git', 'tag', '-d', project.version
+        }
         // add fdroid changelog files
         // compute the exact fdroid changelog file created earlier
         def versionCode = calculateAndroidVersionCode(project.version)
@@ -208,18 +220,27 @@ tasks.register('release') {
         def fdroidFile = file(fdroidRelPath)
         if (fdroidFile.exists()) {
             println("Adding F-Droid changelog ${fdroidRelPath} to git")
-            grgit.add(patterns: [fdroidRelPath])
+            exec {
+                commandLine 'git', 'add', fdroidRelPath
+            }
         } else {
             println("Fdroid changelog not found at ${fdroidRelPath} - skipping add")
         }
         // commit changelog
-        grgit.commit(message: "Release ${project.version}", all: true, sign: false)
+        exec {
+            commandLine 'git', 'add', '-A'
+        }
+        exec {
+            commandLine 'git', 'commit', '-m', "Release ${project.version}", '--no-gpg-sign'
+        }
         // sign commit
         exec {
             commandLine 'git', 'commit', '--amend', '--no-edit', '--allow-empty', '-s'
         }
         // add final release tag
-        grgit.tag.add(name: project.version)
+        exec {
+            commandLine 'git', 'tag', project.version
+        }
         println("To publish the commit and tag: git push --atomic origin main ${project.version}")
     }
 }
