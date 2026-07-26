@@ -124,15 +124,16 @@ static def calculateAndroidVersionCode(versionName) {
 }
 
 tasks.register('gitReleaseNotesTask', GitChangelogTask) {
+    def currentVersion = project.version.toString()
     def prevTagProvider = providers.exec {
         commandLine 'bash', '-lc', 'git tag --sort=-creatordate | head -n 2 | tail -n 1'
-    }.standardOutput.asText().map { it.trim() }
+    }.standardOutput.getAsText().map { it.trim() }
 
     doFirst {
-        println "Generating Release notes for ${project.version} compared to ${prevTagProvider.get()}"
+        println "Generating Release notes for ${currentVersion} compared to ${prevTagProvider.get()}"
     }
 
-    toRevision.set(project.version)
+    toRevision.set(currentVersion)
     fromRevisionStrategy.set(InclusivenessStrategy.EXCLUSIVE)
     fromRevision.set(prevTagProvider)
     file.set(new File("${rootDir}/RELEASE_NOTES.md"))
@@ -143,22 +144,25 @@ tasks.register('gitReleaseNotesTask', GitChangelogTask) {
 }
 
 tasks.register('gitChangelogTask', GitChangelogTask) {
+    def currentVersion = project.version.toString()
     // Append only the new changes since the latest tag to the top of CHANGELOG.md
     def prevTagProvider = providers.exec {
         commandLine 'bash', '-lc', 'git tag --sort=-creatordate | head -n 1'
-    }.standardOutput.asText().map { it.trim() }
+    }.standardOutput.getAsText().map { it.trim() }
 
     fromRevision.set(prevTagProvider.map { tag ->
         tag.isEmpty() ? "440bdfdf94c09ef4edf1885b25852078a66d6332" : tag
     })
     fromRevisionStrategy.set(InclusivenessStrategy.EXCLUSIVE)
-    toRevision.set(project.version)
+    toRevision.set(currentVersion)
     file.set(new File("${rootDir}/CHANGELOG.md"))
     prependToFile.set(true)
     templateContent.set(templateChangelogEntryContent)
 }
 
 tasks.register('bumpReleaseVersion') {
+    def currentVersion = project.version.toString()
+    def rootDirPath = rootDir.absolutePath
     doLast {
         def statusOut = new ByteArrayOutputStream()
         exec {
@@ -170,15 +174,15 @@ tasks.register('bumpReleaseVersion') {
         }
 
         // get next version
-        def (major, minor, patch) = project.version.replace("v", "").tokenize('.')
+        def (major, minor, patch) = currentVersion.replace("v", "").tokenize('.')
         (major, minor, patch) = [major, minor, patch].collect { it.toInteger() }
         def nextVersion = "v${major}.${minor}.${patch + 1}"
 
-        println("Bumping ${project.version} => ${nextVersion}")
+        println("Bumping ${currentVersion} => ${nextVersion}")
 
         // update file
-        def propsFile = file("${rootDir}/gradle.properties")
-        def propsText = propsFile.text.replace(project.version, nextVersion)
+        def propsFile = new File(rootDirPath, "gradle.properties")
+        def propsText = propsFile.text.replace(currentVersion, nextVersion)
         propsFile.text = propsText
 
         // commit
@@ -196,28 +200,30 @@ tasks.register('bumpReleaseVersion') {
 }
 
 tasks.register('prepareReleaseTag') {
+    def currentVersion = project.version.toString()
     doLast {
-        println("Adding temp tag ${project.version}")
+        println("Adding temp tag ${currentVersion}")
         exec {
-            commandLine 'git', 'tag', project.version
+            commandLine 'git', 'tag', currentVersion
         }
     }
 }
 
 tasks.register('release') {
+    def currentVersion = project.version.toString()
     dependsOn tasks.named('prepareReleaseTag'), tasks.named('gitChangelogTask'), tasks.named('gitFdroidChangelogTask')
 
     doLast {
-        println("Releasing ${project.version}")
+        println("Releasing ${currentVersion}")
         // remove temp tag
         exec {
-            commandLine 'git', 'tag', '-d', project.version
+            commandLine 'git', 'tag', '-d', currentVersion
         }
         // add fdroid changelog files
         // compute the exact fdroid changelog file created earlier
-        def versionCode = calculateAndroidVersionCode(project.version)
+        def versionCode = calculateAndroidVersionCode(currentVersion)
         def fdroidRelPath = "fastlane/metadata/android/en-US/changelogs/${versionCode}.txt"
-        def fdroidFile = file(fdroidRelPath)
+        def fdroidFile = new File(fdroidRelPath)
         if (fdroidFile.exists()) {
             println("Adding F-Droid changelog ${fdroidRelPath} to git")
             exec {
@@ -231,7 +237,7 @@ tasks.register('release') {
             commandLine 'git', 'add', '-A'
         }
         exec {
-            commandLine 'git', 'commit', '-m', "Release ${project.version}", '--no-gpg-sign'
+            commandLine 'git', 'commit', '-m', "Release ${currentVersion}", '--no-gpg-sign'
         }
         // sign commit
         exec {
@@ -239,27 +245,28 @@ tasks.register('release') {
         }
         // add final release tag
         exec {
-            commandLine 'git', 'tag', project.version
+            commandLine 'git', 'tag', currentVersion
         }
-        println("To publish the commit and tag: git push --atomic origin main ${project.version}")
+        println("To publish the commit and tag: git push --atomic origin main ${currentVersion}")
     }
 }
 
 tasks.register('gitFdroidChangelogTask', GitChangelogTask) {
+    def currentVersion = project.version.toString()
     def prevTagProvider = providers.exec {
         commandLine 'bash', '-lc', 'git tag --sort=-creatordate | head -n 1'
-    }.standardOutput.asText().map { it.trim() }
+    }.standardOutput.getAsText().map { it.trim() }
 
     doFirst {
-        println("Update Fdroid changelogs ${project.version}")
+        println("Update Fdroid changelogs ${currentVersion}")
     }
 
     fromRevision.set(prevTagProvider.map { tag ->
         tag.isEmpty() ? "440bdfdf94c09ef4edf1885b25852078a66d6332" : tag
     })
     fromRevisionStrategy.set(InclusivenessStrategy.EXCLUSIVE)
-    toRevision.set(project.version)
-    def versionCode = calculateAndroidVersionCode(project.version)
+    toRevision.set(currentVersion)
+    def versionCode = calculateAndroidVersionCode(currentVersion)
     file.set(new File("fastlane/metadata/android/en-US/changelogs/${versionCode}.txt"))
     prependToFile.set(false)
     templateContent.set(templateFdroidChangelogContent)
