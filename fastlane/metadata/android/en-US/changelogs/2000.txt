@@ -1,0 +1,2 @@
+ -  **build**  use ExecOperations for git commands
+ -  **android**  do not use forced edge-to-edge screens
