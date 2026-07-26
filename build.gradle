@@ -215,6 +215,8 @@ tasks.register('release') {
     def currentVersion = project.version.toString()
     def execOps = services.get(org.gradle.process.ExecOperations)
     def versionCode = calculateAndroidVersionCode(currentVersion)
+    def fdroidRelPath = "fastlane/metadata/android/en-US/changelogs/${versionCode}.txt"
+    def fdroidFile = project.file(fdroidRelPath)
     dependsOn tasks.named('prepareReleaseTag'), tasks.named('gitChangelogTask'), tasks.named('gitFdroidChangelogTask')
 
     doLast {
@@ -225,8 +227,6 @@ tasks.register('release') {
         }
         // add fdroid changelog files
         // compute the exact fdroid changelog file created earlier
-        def fdroidRelPath = "fastlane/metadata/android/en-US/changelogs/${versionCode}.txt"
-        def fdroidFile = project.file(fdroidRelPath)
         if (fdroidFile.exists()) {
             println("Adding F-Droid changelog ${fdroidRelPath} to git")
             execOps.exec {
