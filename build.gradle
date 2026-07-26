@@ -125,28 +125,34 @@ static def calculateAndroidVersionCode(versionName) {
 }
 
 tasks.register('gitReleaseNotesTask', GitChangelogTask) {
-    def prev_tag = ['bash', '-lc', 'git tag --sort=-creatordate | head -n 2 | tail -n 1'].execute().text.trim()
-    println "Generating Release notes for ${project.version} compared to ${prev_tag}"
+    def prevTagProvider = providers.exec {
+        commandLine 'bash', '-lc', 'git tag --sort=-creatordate | head -n 2 | tail -n 1'
+    }.standardOutput.asText().map { it.trim() }
+
+    doFirst {
+        println "Generating Release notes for ${project.version} compared to ${prevTagProvider.get()}"
+    }
 
     toRevision.set(project.version)
     fromRevisionStrategy.set(InclusivenessStrategy.EXCLUSIVE)
-    fromRevision.set(prev_tag)
+    fromRevision.set(prevTagProvider)
     file.set(new File("${rootDir}/RELEASE_NOTES.md"))
     prependToFile.set(false) // false will replace the file, true will prepend content
-    templateContent.set(templateReleaseLogContent.replace("PREVIOUS", prev_tag))
+    templateContent.set(prevTagProvider.map { prev_tag ->
+        templateReleaseLogContent.replace("PREVIOUS", prev_tag)
+    })
 }
 
 tasks.register('gitChangelogTask', GitChangelogTask) {
     // Append only the new changes since the latest tag to the top of CHANGELOG.md
-    def prev_tag = ['bash', '-lc', 'git tag --sort=-creatordate | head -n 1'].execute().text.trim()
-    if (!prev_tag) {
-        // Fallback to initial commit if no tag exists
-        fromRevision.set("440bdfdf94c09ef4edf1885b25852078a66d6332")
-        fromRevisionStrategy.set(InclusivenessStrategy.EXCLUSIVE)
-    } else {
-        fromRevision.set(prev_tag)
-        fromRevisionStrategy.set(InclusivenessStrategy.EXCLUSIVE)
-    }
+    def prevTagProvider = providers.exec {
+        commandLine 'bash', '-lc', 'git tag --sort=-creatordate | head -n 1'
+    }.standardOutput.asText().map { it.trim() }
+
+    fromRevision.set(prevTagProvider.map { tag ->
+        tag.isEmpty() ? "440bdfdf94c09ef4edf1885b25852078a66d6332" : tag
+    })
+    fromRevisionStrategy.set(InclusivenessStrategy.EXCLUSIVE)
     toRevision.set(project.version)
     file.set(new File("${rootDir}/CHANGELOG.md"))
     prependToFile.set(true)
@@ -154,27 +160,31 @@ tasks.register('gitChangelogTask', GitChangelogTask) {
 }
 
 tasks.register('bumpReleaseVersion') {
-    if (!grgit.status().clean) {
-        throw new GradleException('Git repository is dirty. Commit your changes first!')
+    doLast {
+        if (!grgit.status().clean) {
+            throw new GradleException('Git repository is dirty. Commit your changes first!')
+        }
+
+        // get next version
+        def (major, minor, patch) = project.version.replace("v", "").tokenize('.')
+        (major, minor, patch) = [major, minor, patch].collect { it.toInteger() }
+        def nextVersion = "v${major}.${minor}.${patch + 1}"
+
+        println("Bumping ${project.version} => ${nextVersion}")
+
+        // update file
+        def propsFile = file("${rootDir}/gradle.properties")
+        def propsText = propsFile.text.replace(project.version, nextVersion)
+        propsFile.text = propsText
+
+        // commit
+        grgit.add(patterns: ['gradle.properties'])
+        grgit.commit(message: "Bump version to ${nextVersion}", sign: false)
+        // sign commit
+        exec {
+            commandLine 'git', 'commit', '--amend', '--no-edit', '--allow-empty', '-s'
+        }
     }
-
-    // get next version
-    def (major, minor, patch) = project.version.replace("v", "").tokenize('.')
-    (major, minor, patch) = [major, minor, patch].collect { it.toInteger() }
-    def nextVersion = "v${major}.${minor}.${patch + 1}"
-
-    println("Bumping ${project.version} => ${nextVersion}")
-
-    // update file
-    def propsFile = file("${rootDir}/gradle.properties")
-    def propsText = propsFile.text.replace(project.version, nextVersion)
-    propsFile.text = propsText
-
-    // commit
-    grgit.add(patterns: ['gradle.properties'])
-    grgit.commit(message: "Bump version to ${nextVersion}", sign: false)
-    // sign commit
-    'git commit --amend --no-edit --allow-empty -s'.execute() // sign commit
 }
 
 tasks.register('prepareReleaseTag') {
@@ -205,7 +215,9 @@ tasks.register('release') {
         // commit changelog
         grgit.commit(message: "Release ${project.version}", all: true, sign: false)
         // sign commit
-        'git commit --amend --no-edit --allow-empty -s'.execute()
+        exec {
+            commandLine 'git', 'commit', '--amend', '--no-edit', '--allow-empty', '-s'
+        }
         // add final release tag
         grgit.tag.add(name: project.version)
         println("To publish the commit and tag: git push --atomic origin main ${project.version}")
@@ -213,15 +225,18 @@ tasks.register('release') {
 }
 
 tasks.register('gitFdroidChangelogTask', GitChangelogTask) {
-    println("Update Fdroid changelogs ${project.version}")
-    def prev_tag = ['bash', '-lc', 'git tag --sort=-creatordate | head -n 1'].execute().text.trim()
-    if (!prev_tag) {
-        fromRevision.set("440bdfdf94c09ef4edf1885b25852078a66d6332")
-        fromRevisionStrategy.set(InclusivenessStrategy.EXCLUSIVE)
-    } else {
-        fromRevision.set(prev_tag)
-        fromRevisionStrategy.set(InclusivenessStrategy.EXCLUSIVE)
+    def prevTagProvider = providers.exec {
+        commandLine 'bash', '-lc', 'git tag --sort=-creatordate | head -n 1'
+    }.standardOutput.asText().map { it.trim() }
+
+    doFirst {
+        println("Update Fdroid changelogs ${project.version}")
     }
+
+    fromRevision.set(prevTagProvider.map { tag ->
+        tag.isEmpty() ? "440bdfdf94c09ef4edf1885b25852078a66d6332" : tag
+    })
+    fromRevisionStrategy.set(InclusivenessStrategy.EXCLUSIVE)
     toRevision.set(project.version)
     def versionCode = calculateAndroidVersionCode(project.version)
     file.set(new File("fastlane/metadata/android/en-US/changelogs/${versionCode}.txt"))
