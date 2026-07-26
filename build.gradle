@@ -136,7 +136,7 @@ tasks.register('gitReleaseNotesTask', GitChangelogTask) {
     toRevision.set(currentVersion)
     fromRevisionStrategy.set(InclusivenessStrategy.EXCLUSIVE)
     fromRevision.set(prevTagProvider)
-    file.set(new File("${rootDir}/RELEASE_NOTES.md"))
+    file.set(project.file("RELEASE_NOTES.md"))
     prependToFile.set(false) // false will replace the file, true will prepend content
     templateContent.set(prevTagProvider.map { prev_tag ->
         templateReleaseLogContent.replace("PREVIOUS", prev_tag)
@@ -155,7 +155,7 @@ tasks.register('gitChangelogTask', GitChangelogTask) {
     })
     fromRevisionStrategy.set(InclusivenessStrategy.EXCLUSIVE)
     toRevision.set(currentVersion)
-    file.set(new File("${rootDir}/CHANGELOG.md"))
+    file.set(project.file("CHANGELOG.md"))
     prependToFile.set(true)
     templateContent.set(templateChangelogEntryContent)
 }
@@ -271,7 +271,7 @@ tasks.register('gitFdroidChangelogTask', GitChangelogTask) {
     fromRevisionStrategy.set(InclusivenessStrategy.EXCLUSIVE)
     toRevision.set(currentVersion)
     def versionCode = calculateAndroidVersionCode(currentVersion)
-    file.set(layout.projectDirectory.file("fastlane/metadata/android/en-US/changelogs/${versionCode}.txt"))
+    file.set(project.file("fastlane/metadata/android/en-US/changelogs/${versionCode}.txt"))
     prependToFile.set(false)
     templateContent.set(templateFdroidChangelogContent)
 }
