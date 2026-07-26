@@ -8,8 +8,12 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -92,6 +96,20 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
         fabAdd.setOnClickListener(v -> {
             Intent intent = new Intent(this, EditTimerActivity.class);
             startActivity(intent);
+        });
+
+        ViewCompat.setOnApplyWindowInsetsListener(recyclerView.getRootView(), (v, windowInsets) -> {
+            Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(insets.left, 0, insets.right, 0);
+            
+            ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) fabAdd.getLayoutParams();
+            int margin = getResources().getDimensionPixelSize(R.dimen.fab_margin);
+            mlp.leftMargin = margin;
+            mlp.rightMargin = margin;
+            mlp.bottomMargin = insets.bottom + margin;
+            fabAdd.setLayoutParams(mlp);
+            
+            return windowInsets;
         });
 
         checkNotificationPermission();

@@ -11,6 +11,9 @@ import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.lifecycle.ViewModelProvider;
 import com.google.android.material.button.MaterialButton;
 import io.github.ffalt.doughtime.R;
@@ -150,6 +153,12 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.toolbar).getRootView(), (v, windowInsets) -> {
+            Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(insets.left, 0, insets.right, insets.bottom);
+            return windowInsets;
+        });
 
         startTimerService();
     }

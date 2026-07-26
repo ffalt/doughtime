@@ -1,8 +1,13 @@
 package io.github.ffalt.doughtime.ui.edit;
 
 import android.os.Bundle;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -67,6 +72,21 @@ public class EditTimerActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.fab_save).setOnClickListener(v -> saveTimer());
+
+        ViewCompat.setOnApplyWindowInsetsListener(recyclerSteps.getRootView(), (v, windowInsets) -> {
+            Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(insets.left, 0, insets.right, 0);
+
+            View fabSave = findViewById(R.id.fab_save);
+            ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) fabSave.getLayoutParams();
+            int margin = getResources().getDimensionPixelSize(R.dimen.fab_margin);
+            mlp.leftMargin = margin;
+            mlp.rightMargin = margin;
+            mlp.bottomMargin = insets.bottom + margin;
+            fabSave.setLayoutParams(mlp);
+
+            return windowInsets;
+        });
         
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());

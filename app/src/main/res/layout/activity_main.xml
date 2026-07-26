@@ -78,7 +78,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_margin="20dp"
+        android:layout_margin="@dimen/fab_margin"
         android:contentDescription="@string/cd_add_timer"
         android:text="@string/action_add_timer"
         app:icon="@drawable/ic_add" />
