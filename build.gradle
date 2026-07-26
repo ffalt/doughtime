@@ -126,7 +126,7 @@ def calculateAndroidVersionCode(versionName) {
 tasks.register('gitReleaseNotesTask', GitChangelogTask) {
     def currentVersion = project.version.toString()
     def prevTagProvider = providers.exec {
-        commandLine 'bash', '-lc', 'git tag --sort=-creatordate | head -n 2 | tail -n 1'
+        commandLine 'bash', '-lc', "git tag --sort=-creatordate | grep -F -x -v \"${currentVersion}\" | head -n 1"
     }.standardOutput.getAsText().map { it.trim() }
 
     doFirst {
@@ -147,8 +147,12 @@ tasks.register('gitChangelogTask', GitChangelogTask) {
     def currentVersion = project.version.toString()
     // Append only the new changes since the latest tag to the top of CHANGELOG.md
     def prevTagProvider = providers.exec {
-        commandLine 'bash', '-lc', 'git tag --sort=-creatordate | head -n 1'
+        commandLine 'bash', '-lc', "git tag --sort=-creatordate | grep -F -x -v \"${currentVersion}\" | head -n 1"
     }.standardOutput.getAsText().map { it.trim() }
+
+    doFirst {
+        println "Update CHANGELOG.md ${currentVersion}"
+    }
 
     fromRevision.set(prevTagProvider.map { tag ->
         tag.isEmpty() ? "66b3d54098225d3738b73537fd5c7640bab594fa" : tag
@@ -257,7 +261,7 @@ tasks.register('release') {
 tasks.register('gitFdroidChangelogTask', GitChangelogTask) {
     def currentVersion = project.version.toString()
     def prevTagProvider = providers.exec {
-        commandLine 'bash', '-lc', 'git tag --sort=-creatordate | head -n 1'
+        commandLine 'bash', '-lc', "git tag --sort=-creatordate | grep -F -x -v \"${currentVersion}\" | head -n 1"
     }.standardOutput.getAsText().map { it.trim() }
 
     doFirst {
