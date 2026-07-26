@@ -226,7 +226,7 @@ tasks.register('release') {
         // add fdroid changelog files
         // compute the exact fdroid changelog file created earlier
         def fdroidRelPath = "fastlane/metadata/android/en-US/changelogs/${versionCode}.txt"
-        def fdroidFile = new File(fdroidRelPath)
+        def fdroidFile = project.file(fdroidRelPath)
         if (fdroidFile.exists()) {
             println("Adding F-Droid changelog ${fdroidRelPath} to git")
             execOps.exec {
@@ -240,7 +240,7 @@ tasks.register('release') {
             commandLine 'git', 'add', '-A'
         }
         execOps.exec {
-            commandLine 'git', 'commit', '-m', "Release ${currentVersion}", '--no-gpg-sign'
+            commandLine 'git', 'commit', '-m', "Release ${currentVersion}", '--no-gpg-sign', '--allow-empty'
         }
         // sign commit
         execOps.exec {
@@ -271,7 +271,7 @@ tasks.register('gitFdroidChangelogTask', GitChangelogTask) {
     fromRevisionStrategy.set(InclusivenessStrategy.EXCLUSIVE)
     toRevision.set(currentVersion)
     def versionCode = calculateAndroidVersionCode(currentVersion)
-    file.set(new File("fastlane/metadata/android/en-US/changelogs/${versionCode}.txt"))
+    file.set(layout.projectDirectory.file("fastlane/metadata/android/en-US/changelogs/${versionCode}.txt"))
     prependToFile.set(false)
     templateContent.set(templateFdroidChangelogContent)
 }
