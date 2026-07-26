@@ -163,9 +163,10 @@ tasks.register('gitChangelogTask', GitChangelogTask) {
 tasks.register('bumpReleaseVersion') {
     def currentVersion = project.version.toString()
     def rootDirPath = rootDir.absolutePath
+    def execOps = services.get(org.gradle.process.ExecOperations)
     doLast {
         def statusOut = new ByteArrayOutputStream()
-        exec {
+        execOps.exec {
             commandLine 'git', 'status', '--porcelain'
             standardOutput = statusOut
         }
@@ -186,14 +187,14 @@ tasks.register('bumpReleaseVersion') {
         propsFile.text = propsText
 
         // commit
-        exec {
+        execOps.exec {
             commandLine 'git', 'add', 'gradle.properties'
         }
-        exec {
+        execOps.exec {
             commandLine 'git', 'commit', '-m', "Bump version to ${nextVersion}", '--no-gpg-sign'
         }
         // sign commit if needed or just use -s
-        exec {
+        execOps.exec {
             commandLine 'git', 'commit', '--amend', '--no-edit', '--allow-empty', '-s'
         }
     }
@@ -201,9 +202,10 @@ tasks.register('bumpReleaseVersion') {
 
 tasks.register('prepareReleaseTag') {
     def currentVersion = project.version.toString()
+    def execOps = services.get(org.gradle.process.ExecOperations)
     doLast {
         println("Adding temp tag ${currentVersion}")
-        exec {
+        execOps.exec {
             commandLine 'git', 'tag', currentVersion
         }
     }
@@ -211,12 +213,13 @@ tasks.register('prepareReleaseTag') {
 
 tasks.register('release') {
     def currentVersion = project.version.toString()
+    def execOps = services.get(org.gradle.process.ExecOperations)
     dependsOn tasks.named('prepareReleaseTag'), tasks.named('gitChangelogTask'), tasks.named('gitFdroidChangelogTask')
 
     doLast {
         println("Releasing ${currentVersion}")
         // remove temp tag
-        exec {
+        execOps.exec {
             commandLine 'git', 'tag', '-d', currentVersion
         }
         // add fdroid changelog files
@@ -226,25 +229,25 @@ tasks.register('release') {
         def fdroidFile = new File(fdroidRelPath)
         if (fdroidFile.exists()) {
             println("Adding F-Droid changelog ${fdroidRelPath} to git")
-            exec {
+            execOps.exec {
                 commandLine 'git', 'add', fdroidRelPath
             }
         } else {
             println("Fdroid changelog not found at ${fdroidRelPath} - skipping add")
         }
         // commit changelog
-        exec {
+        execOps.exec {
             commandLine 'git', 'add', '-A'
         }
-        exec {
+        execOps.exec {
             commandLine 'git', 'commit', '-m', "Release ${currentVersion}", '--no-gpg-sign'
         }
         // sign commit
-        exec {
+        execOps.exec {
             commandLine 'git', 'commit', '--amend', '--no-edit', '--allow-empty', '-s'
         }
         // add final release tag
-        exec {
+        execOps.exec {
             commandLine 'git', 'tag', currentVersion
         }
         println("To publish the commit and tag: git push --atomic origin main ${currentVersion}")
