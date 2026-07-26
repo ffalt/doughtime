@@ -151,7 +151,7 @@ tasks.register('gitChangelogTask', GitChangelogTask) {
     }.standardOutput.getAsText().map { it.trim() }
 
     fromRevision.set(prevTagProvider.map { tag ->
-        tag.isEmpty() ? "440bdfdf94c09ef4edf1885b25852078a66d6332" : tag
+        tag.isEmpty() ? "66b3d54098225d3738b73537fd5c7640bab594fa" : tag
     })
     fromRevisionStrategy.set(InclusivenessStrategy.EXCLUSIVE)
     toRevision.set(currentVersion)
