@@ -2,6 +2,7 @@ package io.github.ffalt.doughtime.data.entity;
 
 import androidx.room.Entity;
 import androidx.room.ForeignKey;
+import androidx.room.Ignore;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
@@ -27,6 +28,7 @@ public class TimerStep {
     public TimerStep() {
     }
 
+    @Ignore
     public TimerStep(long timerId, String title, String description, long durationSeconds, int stepOrder) {
         this.timerId = timerId;
         this.title = title;
