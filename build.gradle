@@ -117,7 +117,7 @@ def templateFdroidChangelogContent = """{{#tags}}
 {{/tags}}
 """
 
-static def calculateAndroidVersionCode(versionName) {
+def calculateAndroidVersionCode(versionName) {
     def (major, minor, patch, build) = versionName.replace("v", "").tokenize('.')
     (major, minor, patch, build) = [major, minor, patch, build].collect { it == null ? 0 : it.toInteger() }
     return (major * 1000 * 1000 * 1000) + (minor * 1000 * 1000) + (patch * 1000) + build
@@ -214,6 +214,7 @@ tasks.register('prepareReleaseTag') {
 tasks.register('release') {
     def currentVersion = project.version.toString()
     def execOps = services.get(org.gradle.process.ExecOperations)
+    def versionCode = calculateAndroidVersionCode(currentVersion)
     dependsOn tasks.named('prepareReleaseTag'), tasks.named('gitChangelogTask'), tasks.named('gitFdroidChangelogTask')
 
     doLast {
@@ -224,7 +225,6 @@ tasks.register('release') {
         }
         // add fdroid changelog files
         // compute the exact fdroid changelog file created earlier
-        def versionCode = calculateAndroidVersionCode(currentVersion)
         def fdroidRelPath = "fastlane/metadata/android/en-US/changelogs/${versionCode}.txt"
         def fdroidFile = new File(fdroidRelPath)
         if (fdroidFile.exists()) {
@@ -262,6 +262,7 @@ tasks.register('gitFdroidChangelogTask', GitChangelogTask) {
 
     doFirst {
         println("Update Fdroid changelogs ${currentVersion}")
+        file.get().parentFile.mkdirs()
     }
 
     fromRevision.set(prevTagProvider.map { tag ->
