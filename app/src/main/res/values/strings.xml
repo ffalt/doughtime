@@ -59,4 +59,22 @@
     <string name="action_duplicate">Duplicate</string>
     <string name="timer_copy_suffix"> (Copy)</string>
     <string name="action_delete">Delete</string>
+
+    <!-- Default Timer Data -->
+    <string name="default_timer_sourdough_title">Sourdough</string>
+    <string name="default_timer_sourdough_desc">Standard sourdough process</string>
+    <string name="default_step_feeding_title">Feeding</string>
+    <string name="default_step_feeding_desc">Feed your starter dough</string>
+    <string name="default_step_resting1_title">Resting Time 1</string>
+    <string name="default_step_resting1_desc">Let the dough rest</string>
+    <string name="default_step_resting2_title">Resting Time 2</string>
+    <string name="default_step_resting2_desc">If necessary, let the dough rest further</string>
+    <string name="default_step_preheat_title">Preheat</string>
+    <string name="default_step_preheat_desc">Preheat the oven to 250 degrees</string>
+    <string name="default_step_baking1_title">Baking Phase 1</string>
+    <string name="default_step_baking1_desc">Bake with lid at 250 degrees</string>
+    <string name="default_step_baking2_title">Baking Phase 2</string>
+    <string name="default_step_baking2_desc">Bake at 220 degrees</string>
+    <string name="default_step_baking3_title">Baking Phase 3</string>
+    <string name="default_step_baking3_desc">Bake at 200 degrees</string>
 </resources>

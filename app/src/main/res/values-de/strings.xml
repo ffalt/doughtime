@@ -59,4 +59,22 @@
     <string name="action_duplicate">Duplizieren</string>
     <string name="timer_copy_suffix"> (Kopie)</string>
     <string name="action_delete">Löschen</string>
+
+    <!-- Standard-Timer-Daten -->
+    <string name="default_timer_sourdough_title">Sauerteig</string>
+    <string name="default_timer_sourdough_desc">Standard-Sauerteig-Prozess</string>
+    <string name="default_step_feeding_title">Fütterung</string>
+    <string name="default_step_feeding_desc">Fütter deinen Starter-Teig</string>
+    <string name="default_step_resting1_title">Teigruhe 1</string>
+    <string name="default_step_resting1_desc">Teig gehen lassen</string>
+    <string name="default_step_resting2_title">Teigruhe 2</string>
+    <string name="default_step_resting2_desc">Wenn nötig Teig weiter gehen lassen</string>
+    <string name="default_step_preheat_title">Vorheizen</string>
+    <string name="default_step_preheat_desc">Ofen auf 250 Grad vorheizen</string>
+    <string name="default_step_baking1_title">Backen Phase 1</string>
+    <string name="default_step_baking1_desc">Backen mit Deckel 250 Grad</string>
+    <string name="default_step_baking2_title">Backen Phase 2</string>
+    <string name="default_step_baking2_desc">Backen bei 220 Grad</string>
+    <string name="default_step_baking3_title">Backen Phase 3</string>
+    <string name="default_step_baking3_desc">Backen bei 200 Grad</string>
 </resources>
