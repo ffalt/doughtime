@@ -1,0 +1,82 @@
+plugins {
+    alias(libs.plugins.android.application)
+}
+
+static def calculateAndroidVersionCode(versionName) {
+    def (major, minor, patch, build) = versionName.replace("v", "").tokenize('.')
+    (major, minor, patch, build) = [major, minor, patch, build].collect { it == null ? 0 : it.toInteger() }
+    return (major * 1000 * 1000 * 1000) + (minor * 1000 * 1000) + (patch * 1000) + build
+}
+
+android {
+    namespace = 'io.github.ffalt.doughtime'
+    compileSdk = 37
+
+    defaultConfig {
+        applicationId = "io.github.ffalt.doughtime"
+        minSdk = 26
+        targetSdk = 37
+        versionCode = calculateAndroidVersionCode(project.version)
+        versionName = project.version
+    }
+
+    dependenciesInfo {
+        // Disables dependency metadata when building APKs (for IzzyOnDroid/F-Droid)
+        includeInApk = false
+        // Disables dependency metadata when building Android App Bundles (for Google Play)
+        includeInBundle = false
+    }
+
+    signingConfigs {
+        debug {
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+        }
+        release {
+            keyAlias = System.getenv("SIGNING_KEY_ALIAS")
+            keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
+            storeFile = file("doughtime_keystore.jks")
+            storePassword = System.getenv("SIGNING_STORE_PASSWORD")
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("debug")
+            minifyEnabled = false
+            //noinspection NotShrinkingResources
+            shrinkResources = false
+        }
+        release {
+            signingConfig = signingConfigs.getByName("release")
+            minifyEnabled = true
+            shrinkResources = true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation libs.appcompat
+    implementation libs.material
+    implementation libs.androidx.constraintlayout
+    
+    // Room
+    implementation libs.androidx.room.runtime
+    annotationProcessor libs.androidx.room.compiler
+    
+    // Lifecycle
+    implementation libs.androidx.lifecycle.viewmodel
+    implementation libs.androidx.lifecycle.livedata
+
+    testImplementation libs.junit
+    androidTestImplementation libs.androidx.junit
+    androidTestImplementation libs.androidx.espresso.core
+}

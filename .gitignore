@@ -1,0 +1,17 @@
+*.iml
+.gradle
+/local.properties
+.idea
+.DS_Store
+/app/build
+/app/lint
+/app/release
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+/gradle/gradle-daemon-jvm.properties
+doughtime_keystore.*
+RELEASE_NOTES.md
+local
+/build/reports/*

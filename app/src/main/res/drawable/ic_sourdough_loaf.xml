@@ -1,0 +1,45 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="68dp"
+    android:height="72dp"
+    android:viewportWidth="68"
+    android:viewportHeight="72">
+    
+    <group android:translateX="-20" android:translateY="-20">
+        <!-- Loaf Shadow -->
+        <path
+            android:fillColor="#000000"
+            android:fillAlpha="0.15"
+            android:pathData="M54,58 m-34,0 a34,34 0 1,1 68,0 a34,34 0 1,1 -68,0" />
+
+        <!-- Loaf Body (Crust) -->
+        <path
+            android:fillColor="#8B4513"
+            android:pathData="M54,54 m-34,0 a34,34 0 1,1 68,0 a34,34 0 1,1 -68,0" />
+            
+        <!-- Loaf Top (Golden Crust) -->
+        <path
+            android:fillColor="#CD853F"
+            android:pathData="M52,52 m-30,0 a30,30 0 1,1 60,0 a30,30 0 1,1 -60,0" />
+
+        <!-- Iconic Sourdough "Ear" Score (Light Crumb) -->
+        <path
+            android:fillColor="#FFF5E1"
+            android:pathData="M35,60 Q50,30 73,38 Q50,45 35,60 Z" />
+        
+        <!-- Charred edge of the score flap -->
+        <path
+            android:fillColor="#3E1A00"
+            android:pathData="M35,60 Q50,28 73,38 L71,40 Q50,38 37,62 Z" />
+
+        <!-- Secondary score suggesting expansion -->
+        <path
+            android:fillColor="#FFF5E1"
+            android:pathData="M60,65 Q70,55 78,60 Q70,62 60,65 Z" />
+
+        <!-- Subtle flour dusting specks -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:fillAlpha="0.4"
+            android:pathData="M40,30 h2 M65,25 h2 M30,50 h2 M75,70 h2 M50,80 h2" />
+    </group>
+</vector>

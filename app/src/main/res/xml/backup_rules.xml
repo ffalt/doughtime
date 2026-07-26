@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+   See https://developer.android.com/guide/topics/data/autobackup
+   for details.
+-->
+<full-backup-content>
+    <include domain="database" path="dough_time_database"/>
+    <include domain="database" path="dough_time_database-shm"/>
+    <include domain="database" path="dough_time_database-wal"/>
+</full-backup-content>

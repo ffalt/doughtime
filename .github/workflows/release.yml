@@ -1,0 +1,68 @@
+name: release
+
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout With History
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: main
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: 'temurin'
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+
+      - name: Decode Keystore
+        env:
+          ENCODED_STRING: ${{ secrets.KEYSTORE }}
+        run: |
+          echo $ENCODED_STRING | base64 -di > app/doughtime_keystore.jks
+
+      - name: Get Release Version Number
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
+      - name: Build Release Notes
+        run: ./gradlew --no-daemon gitReleaseNotesTask
+
+      - name: Build DoughTime
+        run: ./gradlew --no-daemon build
+        env:
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+
+      - name: Rename APK
+        run: |
+          mv app/build/outputs/apk/release/app-release.apk doughtime-${RELEASE_VERSION}.apk
+
+      - name: Generate Checksums
+        run: |
+          md5sum doughtime-${RELEASE_VERSION}.apk > doughtime-${RELEASE_VERSION}.apk.md5
+          sha256sum doughtime-${RELEASE_VERSION}.apk > doughtime-${RELEASE_VERSION}.apk.sha256
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${RELEASE_VERSION}" \
+            --notes-file RELEASE_NOTES.md \
+            doughtime-${RELEASE_VERSION}.apk \
+            doughtime-${RELEASE_VERSION}.apk.md5 \
+            doughtime-${RELEASE_VERSION}.apk.sha256

@@ -1,0 +1,62 @@
+<resources>
+    <string name="app_name">DoughTime</string>
+
+    <!-- Main screen -->
+    <string name="title_all_timers">Your timers</string>
+    <string name="cd_add_timer">Add timer</string>
+    <string name="action_add_timer">New timer</string>
+
+    <!-- Timer item -->
+    <string name="action_start">Start</string>
+    <string name="cd_more_options">More options</string>
+    <plurals name="timer_steps_count">
+        <item quantity="one">%1$d step</item>
+        <item quantity="other">%1$d steps</item>
+    </plurals>
+    <string name="active_timer_paused_title">%1$s (Paused)</string>
+    <string name="active_timer_step">Step %1$d: %2$s</string>
+
+    <!-- Edit screen -->
+    <string name="title_edit_timer">Edit timer</string>
+    <string name="hint_timer_title">Timer title</string>
+    <string name="hint_timer_description">Description (optional)</string>
+    <string name="label_steps">Steps</string>
+    <string name="action_add_step">Add step</string>
+    <string name="action_save_timer">Save timer</string>
+    <string name="hint_step_title">Step title</string>
+    <string name="hint_step_duration">Duration (minutes)</string>
+    <string name="hint_step_description">Step description (optional)</string>
+    <string name="cd_remove_step">Remove step</string>
+    <string name="step_number">%1$d.</string>
+
+    <!-- Run screen -->
+    <string name="label_previous_step">Previous: %1$s</string>
+    <string name="label_next_steps">Next steps:</string>
+    <string name="label_current_step">Current</string>
+    <string name="label_duration">Duration</string>
+    <string name="label_ends_at">Ends at</string>
+    <string name="label_final_step">Final step</string>
+    <string name="label_time_is_up">Time\'s up!</string>
+    <string name="notification_channel_timer_service">Timer Service Channel</string>
+    <string name="notification_status_paused_with_time">Paused: %1$s</string>
+    <plurals name="notification_timers_active">
+        <item quantity="one">%1$d timer active</item>
+        <item quantity="other">%1$d timers active</item>
+    </plurals>
+    <string name="action_stop_all">Stop all</string>
+    <string name="action_start_next">Start next</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_resume">Resume</string>
+    <string name="action_stop">Stop</string>
+    <string name="action_reset">Reset</string>
+    <string name="action_skip_step">Skip step</string>
+
+    <!-- Service -->
+    <string name="fgs_subtype_sourdough_process_timer">Sourdough process timer</string>
+
+    <!-- Menu -->
+    <string name="action_edit">Edit</string>
+    <string name="action_duplicate">Duplicate</string>
+    <string name="timer_copy_suffix"> (Copy)</string>
+    <string name="action_delete">Delete</string>
+</resources>

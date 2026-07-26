@@ -1,0 +1,4 @@
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_sourdough_loaf"
+    android:insetTop="28dp"
+    android:insetBottom="18dp" />

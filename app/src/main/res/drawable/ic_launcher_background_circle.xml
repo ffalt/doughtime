@@ -1,0 +1,21 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Warm bakery-crust circle background for the legacy (pre-O) launcher icon. -->
+    <path android:pathData="M54,54m-48,0a48,48 0 1,1 96,0a48,48 0 1,1 -96,0">
+        <aapt:attr xmlns:aapt="http://schemas.android.com/aapt" name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="6"
+                android:startY="6"
+                android:endX="102"
+                android:endY="102">
+                <item android:offset="0.0" android:color="#F2B24A" />
+                <item android:offset="0.55" android:color="#C97A2B" />
+                <item android:offset="1.0" android:color="#7A3E0F" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>
