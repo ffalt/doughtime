@@ -1,4 +1,11 @@
 
+## [v0.0.5](https://github.com/ffalt/doughtime/compare/v0.0.5) (2026-07-31)
+
+
+### Bug Fixes
+
+ -  **active timer**  update step end calculations on increase/decrease timer duration ([16da37a188e4e5b](https://github.com/ffalt/doughtime/commit/16da37a188e4e5b9953a6267f27f42d0d3fafb9d))
+
 ## [v0.0.4](https://github.com/ffalt/doughtime/compare/v0.0.4) (2026-07-31)
 
 ### Features

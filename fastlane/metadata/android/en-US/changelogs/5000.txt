@@ -1,0 +1,1 @@
+ -  **active timer**  update step end calculations on increase/decrease timer duration
