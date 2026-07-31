@@ -11,6 +11,7 @@ import android.media.AudioAttributes;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
+import android.os.VibrationAttributes;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.VibratorManager;
@@ -21,11 +22,14 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.SystemClock;
+
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+
 import io.github.ffalt.doughtime.R;
 import io.github.ffalt.doughtime.data.database.AppDatabase;
 import io.github.ffalt.doughtime.data.entity.TimerWithSteps;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -163,7 +167,7 @@ public class TimerService extends Service {
 
         activeTimer = new ActiveTimer(timer, stepIndex);
         activeTimers.put(timerId, activeTimer);
-        
+
         if (activeTimer.timeLeftInMillis > 0) {
             runTimer(activeTimer);
         } else {
@@ -284,7 +288,7 @@ public class TimerService extends Service {
                 listener.onFinish(timerId);
             }
         }
-        
+
         if (activeTimers.isEmpty()) {
             stopForeground(STOP_FOREGROUND_REMOVE);
             stopSelf();
@@ -520,6 +524,11 @@ public class TimerService extends Service {
     }
 
     private void playAlarm() {
+        this.playSound();
+        this.vibrate();
+    }
+
+    private void playSound() {
         Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
         if (notification == null) {
             notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
@@ -527,7 +536,7 @@ public class TimerService extends Service {
         if (notification == null) {
             notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
         }
-        
+
         ringtone = RingtoneManager.getRingtone(getApplicationContext(), notification);
         if (ringtone != null) {
             AudioAttributes audioAttributes = new AudioAttributes.Builder()
@@ -540,17 +549,32 @@ public class TimerService extends Service {
             }
             ringtone.play();
         }
+    }
 
+    private void vibrate() {
         if (vibrator != null && vibrator.hasVibrator()) {
-            long[] pattern = {0, 500, 500};
-            AudioAttributes audioAttributes = new AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build();
-            @SuppressWarnings("deprecation")
-            VibrationEffect effect = VibrationEffect.createWaveform(pattern, 0);
-            vibrator.vibrate(effect, audioAttributes);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                long[] pattern = {0, 500, 500};
+                VibrationEffect effect = VibrationEffect.createWaveform(pattern, 0);
+                VibrationAttributes vibrationAttributes = new VibrationAttributes.Builder()
+                        .setUsage(VibrationAttributes.USAGE_ALARM)
+                        .build();
+                vibrator.vibrate(effect, vibrationAttributes);
+            } else {
+                this.vibrateFallback();
+            }
         }
+    }
+
+    @SuppressWarnings("deprecation")
+    private void vibrateFallback() {
+        long[] pattern = {0, 500, 500};
+        VibrationEffect effect = VibrationEffect.createWaveform(pattern, 0);
+        AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build();
+        vibrator.vibrate(effect, audioAttributes);
     }
 
     private void stopAlarm() {
@@ -574,7 +598,7 @@ public class TimerService extends Service {
         Intent intent = new Intent(this, io.github.ffalt.doughtime.MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
-        
+
         if (alarmWasPlaying) {
             updateNotification();
         }
