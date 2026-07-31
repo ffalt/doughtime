@@ -74,7 +74,10 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
         recyclerActiveTimers = findViewById(R.id.recycler_active_timers);
         recyclerActiveTimers.setLayoutManager(new LinearLayoutManager(this));
         activeAdapter = new ActiveTimerAdapter(timer -> {
-            Intent intent = new Intent(this, TimerRunActivity.class);
+            if (timerService != null && timer.isAlarmPlaying) {
+                timerService.stopAlarmOnly(timer.timer.timer.id);
+            }
+            Intent intent = new Intent(MainActivity.this, TimerRunActivity.class);
             intent.putExtra("TIMER_ID", timer.timer.timer.id);
             startActivity(intent);
         });

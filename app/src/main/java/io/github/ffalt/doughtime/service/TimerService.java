@@ -37,6 +37,8 @@ public class TimerService extends Service {
             "io.github.ffalt.doughtime.ACTION_NOTIFICATION_TOGGLE_PAUSE_RESUME";
     public static final String ACTION_NOTIFICATION_START_NEXT =
             "io.github.ffalt.doughtime.ACTION_NOTIFICATION_START_NEXT";
+    public static final String ACTION_NOTIFICATION_CLICK =
+            "io.github.ffalt.doughtime.ACTION_NOTIFICATION_CLICK";
     public static final String ACTION_EXACT_ALARM = "io.github.ffalt.doughtime.ACTION_EXACT_ALARM";
     public static final String ACTION_EXACT_ALARM_FIRED = "io.github.ffalt.doughtime.ACTION_EXACT_ALARM_FIRED";
     public static final String EXTRA_TIMER_ID = "io.github.ffalt.doughtime.EXTRA_TIMER_ID";
@@ -111,6 +113,10 @@ public class TimerService extends Service {
             if (ACTION_NOTIFICATION_START_NEXT.equals(action)) {
                 long timerId = intent.getLongExtra(EXTRA_TIMER_ID, -1L);
                 startNextTimerStep(timerId);
+                return START_NOT_STICKY;
+            }
+            if (ACTION_NOTIFICATION_CLICK.equals(action)) {
+                handleNotificationClick();
                 return START_NOT_STICKY;
             }
             if (ACTION_EXACT_ALARM_FIRED.equals(action)) {
@@ -556,6 +562,24 @@ public class TimerService extends Service {
         }
     }
 
+    private void handleNotificationClick() {
+        boolean alarmWasPlaying = false;
+        for (ActiveTimer at : activeTimers.values()) {
+            if (at.isAlarmPlaying) {
+                stopAlarmOnly(at.timer.timer.id);
+                alarmWasPlaying = true;
+            }
+        }
+
+        Intent intent = new Intent(this, io.github.ffalt.doughtime.MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        
+        if (alarmWasPlaying) {
+            updateNotification();
+        }
+    }
+
     private void createNotificationChannel() {
         NotificationChannel serviceChannel = new NotificationChannel(
                 CHANNEL_ID,
@@ -567,8 +591,9 @@ public class TimerService extends Service {
     }
 
     private Notification getNotification() {
-        Intent notificationIntent = new Intent(this, io.github.ffalt.doughtime.MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this,
+        Intent notificationIntent = new Intent(this, TimerService.class);
+        notificationIntent.setAction(ACTION_NOTIFICATION_CLICK);
+        PendingIntent pendingIntent = PendingIntent.getService(this,
                 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         String title = getString(R.string.app_name);

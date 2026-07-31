@@ -89,13 +89,13 @@ public class ActiveTimerAdapter extends RecyclerView.Adapter<ActiveTimerAdapter.
                     activeTimer.currentStepIndex + 1,
                     activeTimer.timer.steps.get(activeTimer.currentStepIndex).title
             ));
-            
+
             long millis = activeTimer.timeLeftInMillis;
             int hours = (int) (millis / 3600000);
             int minutes = (int) (millis % 3600000 / 60000);
             int seconds = (int) (millis % 60000 / 1000);
             textCountdown.setText(String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds));
-
+ 
             itemView.setOnClickListener(v -> listener.onActiveTimerClick(activeTimer));
         }
     }
