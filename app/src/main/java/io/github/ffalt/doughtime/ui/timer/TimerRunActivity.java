@@ -46,7 +46,7 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
     private TextView textStepDescription;
     private MaterialButton buttonMinus5;
     private MaterialButton buttonPlus5;
-    private MaterialButton buttonStopToolbar;
+    private MaterialButton buttonStop;
     private LinearLayout layoutNextStepsItems;
     private LinearLayout layoutAlarmControls;
     private LinearLayout layoutActiveControls;
@@ -148,7 +148,7 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         layoutActiveControls = findViewById(R.id.layout_active_controls);
         buttonPauseResumeIcon = findViewById(R.id.button_pause_resume_icon);
         buttonResetIcon = findViewById(R.id.button_reset_icon);
-        buttonStopToolbar = findViewById(R.id.button_stop_toolbar);
+        buttonStop = findViewById(R.id.button_stop_icon);
         MaterialButton buttonStartNext = findViewById(R.id.button_start_next);
         MaterialButton buttonSkip = findViewById(R.id.button_skip);
 
@@ -164,7 +164,7 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         });
 
 
-        buttonStopToolbar.setOnClickListener(v -> showStopConfirmationDialog());
+        buttonStop.setOnClickListener(v -> showStopConfirmationDialog());
 
         buttonStartNext.setOnClickListener(v -> {
             TimerService.ActiveTimer activeTimer = timerService.getActiveTimer(timerId);
