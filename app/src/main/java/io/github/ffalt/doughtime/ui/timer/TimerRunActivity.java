@@ -138,6 +138,7 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
     private void adjustTimer(long deltaMillis) {
         if (timerService != null) {
             timerService.adjustTimer(timerId, deltaMillis);
+            refreshStepPreviews();
         }
     }
 
@@ -293,15 +294,7 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         TimerStep currentStep = timerWithSteps.steps.get(currentIndex);
         showStep(currentStep);
 
-        renderNextStepItems(buildStepItemPreviews(
-                timerWithSteps.steps,
-                currentIndex,
-                activeTimer.timeLeftInMillis,
-                System.currentTimeMillis(),
-                getString(R.string.label_current_step),
-                getString(R.string.label_duration),
-                getString(R.string.label_ends_at)
-        ));
+        refreshStepPreviews();
 
         long timeLeft = activeTimer.timeLeftInMillis;
         updateCountdown(timeLeft);
@@ -332,6 +325,23 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
             buttonMinus5.setVisibility(View.VISIBLE);
             buttonPauseResumeIcon.setIconResource(activeTimer.timerRunning ? R.drawable.ic_pause : R.drawable.ic_play);
         }
+    }
+
+    private void refreshStepPreviews() {
+        TimerService.ActiveTimer activeTimer = timerService == null ? null : timerService.getActiveTimer(timerId);
+        if (timerWithSteps == null || activeTimer == null) {
+            return;
+        }
+
+        renderNextStepItems(buildStepItemPreviews(
+                timerWithSteps.steps,
+                activeTimer.currentStepIndex,
+                activeTimer.timeLeftInMillis,
+                System.currentTimeMillis(),
+                getString(R.string.label_current_step),
+                getString(R.string.label_duration),
+                getString(R.string.label_ends_at)
+        ));
     }
 
     private void updateNotStartedUI() {
