@@ -7,11 +7,13 @@ plugins {
     alias(libs.plugins.gitChangelog)
 }
 
+def checkstyleVersion = libs.versions.checkstyle.get()
+
 subprojects {
     apply plugin: 'checkstyle'
 
     checkstyle {
-        toolVersion = libs.versions.checkstyle.get()
+        toolVersion = checkstyleVersion
         configFile = rootProject.file("app/config/checkstyle/checkstyle.xml")
         ignoreFailures = true
         showViolations = true
@@ -117,7 +119,7 @@ def templateFdroidChangelogContent = """{{#tags}}
 {{/tags}}
 """
 
-def calculateAndroidVersionCode(versionName) {
+static def calculateAndroidVersionCode(versionName) {
     def (major, minor, patch, build) = versionName.replace("v", "").tokenize('.')
     (major, minor, patch, build) = [major, minor, patch, build].collect { it == null ? 0 : it.toInteger() }
     return (major * 1000 * 1000 * 1000) + (minor * 1000 * 1000) + (patch * 1000) + build
@@ -167,7 +169,7 @@ tasks.register('gitChangelogTask', GitChangelogTask) {
 tasks.register('bumpReleaseVersion') {
     def currentVersion = project.version.toString()
     def rootDirPath = rootDir.absolutePath
-    def execOps = services.get(org.gradle.process.ExecOperations)
+    def execOps = services.get(ExecOperations)
     doLast {
         def statusOut = new ByteArrayOutputStream()
         execOps.exec {
@@ -206,7 +208,7 @@ tasks.register('bumpReleaseVersion') {
 
 tasks.register('prepareReleaseTag') {
     def currentVersion = project.version.toString()
-    def execOps = services.get(org.gradle.process.ExecOperations)
+    def execOps = services.get(ExecOperations)
     doLast {
         println("Adding temp tag ${currentVersion}")
         execOps.exec {
@@ -217,7 +219,7 @@ tasks.register('prepareReleaseTag') {
 
 tasks.register('release') {
     def currentVersion = project.version.toString()
-    def execOps = services.get(org.gradle.process.ExecOperations)
+    def execOps = services.get(ExecOperations)
     def versionCode = calculateAndroidVersionCode(currentVersion)
     def fdroidRelPath = "fastlane/metadata/android/en-US/changelogs/${versionCode}.txt"
     def fdroidFile = project.file(fdroidRelPath)

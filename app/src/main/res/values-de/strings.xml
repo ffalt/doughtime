@@ -48,13 +48,10 @@
         <item quantity="one">%1$d Timer aktiv</item>
         <item quantity="other">%1$d Timer aktiv</item>
     </plurals>
-    <string name="action_stop_all">Alle stoppen</string>
     <string name="action_start_next">Nächsten starten</string>
     <string name="action_pause">Pausieren</string>
     <string name="action_resume">Fortsetzen</string>
-    <string name="action_stop">Stoppen</string>
     <string name="action_reset">Zurücksetzen</string>
-    <string name="action_skip_step">Schritt überspringen</string>
     <string name="dialog_stop_timer_title">Timer stoppen?</string>
     <string name="dialog_stop_timer_message">Möchtest du den Timer wirklich stoppen?</string>
     <string name="dialog_stop_timer_positive">Stoppen</string>
