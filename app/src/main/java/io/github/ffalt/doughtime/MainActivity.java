@@ -39,6 +39,7 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
     private java.util.List<TimerWithSteps> allTimers;
 
     private RecyclerView recyclerActiveTimers;
+    private TextView textActiveTimersLabel;
     private TextView textAllTimersLabel;
 
     private final ServiceConnection connection = new ServiceConnection() {
@@ -87,6 +88,7 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
             ((SimpleItemAnimator) activeItemAnimator).setSupportsChangeAnimations(false);
         }
 
+        textActiveTimersLabel = findViewById(R.id.text_active_timers_label);
         textAllTimersLabel = findViewById(R.id.text_all_timers_label);
 
         viewModel = new ViewModelProvider(this).get(TimerViewModel.class);
@@ -157,8 +159,10 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
             java.util.Collection<TimerService.ActiveTimer> activeTimers = timerService.getAllActiveTimers();
             if (activeTimers.isEmpty()) {
                 recyclerActiveTimers.setVisibility(View.GONE);
+                textActiveTimersLabel.setVisibility(View.GONE);
             } else {
                 recyclerActiveTimers.setVisibility(View.VISIBLE);
+                textActiveTimersLabel.setVisibility(View.VISIBLE);
                 activeAdapter.submitList(activeTimers);
             }
 
@@ -187,6 +191,7 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
             }
         } else {
             recyclerActiveTimers.setVisibility(View.GONE);
+            textActiveTimersLabel.setVisibility(View.GONE);
             textAllTimersLabel.setVisibility(View.GONE);
             if (allTimers != null) {
                 adapter.submitList(allTimers);

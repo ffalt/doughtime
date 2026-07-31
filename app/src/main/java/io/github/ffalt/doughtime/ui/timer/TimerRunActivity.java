@@ -53,6 +53,8 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
     private LinearLayout layoutActiveControls;
     private MaterialButton buttonPauseResumeIcon;
     private MaterialButton buttonResetIcon;
+    private MaterialButton buttonAlarmOk;
+    private MaterialButton buttonStartNext;
     private final Handler repeatHandler = new Handler(Looper.getMainLooper());
     private Runnable repeatRunnable;
 
@@ -150,7 +152,8 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         buttonPauseResumeIcon = findViewById(R.id.button_pause_resume_icon);
         buttonResetIcon = findViewById(R.id.button_reset_icon);
         buttonStop = findViewById(R.id.button_stop_icon);
-        MaterialButton buttonStartNext = findViewById(R.id.button_start_next);
+        buttonAlarmOk = findViewById(R.id.button_alarm_ok);
+        buttonStartNext = findViewById(R.id.button_start_next);
 
         buttonPauseResumeIcon.setOnClickListener(v -> {
             TimerService.ActiveTimer activeTimer = timerService.getActiveTimer(timerId);
@@ -180,6 +183,13 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
                     timerService.stopTimer(timerId);
                     finish();
                 }
+            }
+        });
+
+        buttonAlarmOk.setOnClickListener(v -> {
+            if (timerService != null) {
+                timerService.stopAlarmOnly(timerId);
+                updateUI();
             }
         });
 
@@ -284,6 +294,15 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
             layoutActiveControls.setVisibility(View.GONE);
             layoutAlarmControls.setVisibility(View.VISIBLE);
             buttonMinus5.setVisibility(View.GONE);
+            
+            // Show OK button only if alarm is actually playing
+            if (activeTimer.isAlarmPlaying) {
+                buttonAlarmOk.setVisibility(View.VISIBLE);
+                buttonStartNext.setVisibility(View.GONE);
+            } else {
+                buttonAlarmOk.setVisibility(View.GONE);
+                buttonStartNext.setVisibility(View.VISIBLE);
+            }
         } else {
             layoutActiveControls.setVisibility(View.VISIBLE);
             layoutAlarmControls.setVisibility(View.GONE);

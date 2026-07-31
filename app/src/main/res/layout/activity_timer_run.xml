@@ -263,13 +263,23 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:orientation="horizontal">
+                android:orientation="vertical">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/button_alarm_ok"
+                    style="@style/Widget.Material3.Button"
+                    android:layout_width="match_parent"
+                    android:layout_height="72dp"
+                    android:text="@string/action_ok"
+                    android:textAppearance="?attr/textAppearanceHeadlineMedium"
+                    app:cornerRadius="16dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/button_start_next"
-                    style="@style/Widget.Material3.Button"
+                    style="@style/Widget.Material3.Button.TextButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
                     android:text="@string/action_start_next"
                     app:icon="@drawable/ic_skip_next" />
 
