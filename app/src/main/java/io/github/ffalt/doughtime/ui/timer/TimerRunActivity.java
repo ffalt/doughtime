@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Locale;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class TimerRunActivity extends AppCompatActivity implements TimerService.TimerListener {
     private static final int PREVIEW_DETAILS_LEFT_COLUMN_WIDTH = 24;
@@ -150,7 +151,6 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         buttonResetIcon = findViewById(R.id.button_reset_icon);
         buttonStop = findViewById(R.id.button_stop_icon);
         MaterialButton buttonStartNext = findViewById(R.id.button_start_next);
-        MaterialButton buttonSkip = findViewById(R.id.button_skip);
 
         buttonPauseResumeIcon.setOnClickListener(v -> {
             TimerService.ActiveTimer activeTimer = timerService.getActiveTimer(timerId);
@@ -188,20 +188,6 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
             if (activeTimer != null) {
                 timerService.startTimer(timerWithSteps, activeTimer.currentStepIndex);
                 updateUI();
-            }
-        });
-
-        buttonSkip.setOnClickListener(v -> {
-            TimerService.ActiveTimer activeTimer = timerService.getActiveTimer(timerId);
-            if (activeTimer != null) {
-                int nextStep = activeTimer.currentStepIndex + 1;
-                if (nextStep < timerWithSteps.steps.size()) {
-                    timerService.startTimer(timerWithSteps, nextStep);
-                    updateUI();
-                } else {
-                    timerService.stopTimer(timerId);
-                    finish();
-                }
             }
         });
 
@@ -276,9 +262,9 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         ));
         textStepDescription.setText(currentStep.description);
         if (currentStep.description == null || currentStep.description.trim().isEmpty()) {
-            ((View) textStepDescription.getParent()).setVisibility(View.GONE);
+            textStepDescription.setVisibility(View.GONE);
         } else {
-            ((View) textStepDescription.getParent()).setVisibility(View.VISIBLE);
+            textStepDescription.setVisibility(View.VISIBLE);
         }
 
         renderNextStepItems(buildStepItemPreviews(
@@ -377,7 +363,8 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
     private void renderNextStepItems(List<StepPreviewItem> itemPreviews) {
         layoutNextStepsItems.removeAllViews();
         LayoutInflater inflater = LayoutInflater.from(this);
-        for (StepPreviewItem itemPreview : itemPreviews) {
+        for (int i = 0; i < itemPreviews.size(); i++) {
+            StepPreviewItem itemPreview = itemPreviews.get(i);
             View itemView = inflater.inflate(
                     R.layout.item_next_step_preview,
                     layoutNextStepsItems,
@@ -413,6 +400,28 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
                 endsAtView.setText(itemPreview.rightDetailsText);
             } else {
                 detailsLayout.setVisibility(View.GONE);
+            }
+
+            final int targetIndex = i;
+            if (!itemPreview.isActive) {
+                itemView.setOnLongClickListener(v -> {
+                    if (timerService != null && timerWithSteps != null) {
+                        new MaterialAlertDialogBuilder(this)
+                                .setTitle(R.string.dialog_switch_step_title)
+                                .setMessage(R.string.dialog_switch_step_message)
+                                .setPositiveButton(R.string.dialog_switch_step_confirm, (dialog, which) -> {
+                                    timerService.stopAlarmOnly(timerId);
+                                    timerService.startTimer(timerWithSteps, targetIndex);
+                                    layoutAlarmControls.setVisibility(View.GONE);
+                                    layoutActiveControls.setVisibility(View.VISIBLE);
+                                    updateUI();
+                                })
+                                .setNegativeButton(R.string.dialog_cancel, null)
+                                .show();
+                        return true;
+                    }
+                    return false;
+                });
             }
 
             layoutNextStepsItems.addView(itemView);

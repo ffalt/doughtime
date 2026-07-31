@@ -78,4 +78,8 @@
     <string name="default_step_baking2_desc">Backen bei 220 Grad</string>
     <string name="default_step_baking3_title">Backen Phase 3</string>
     <string name="default_step_baking3_desc">Backen bei 200 Grad</string>
+    <string name="dialog_switch_step_title">Schritt wechseln?</string>
+    <string name="dialog_switch_step_message">Möchten Sie zu diesem Schritt wechseln? Der aktuelle Timer wird gestoppt.</string>
+    <string name="dialog_switch_step_confirm">Wechseln</string>
+    <string name="dialog_cancel">Abbrechen</string>
 </resources>

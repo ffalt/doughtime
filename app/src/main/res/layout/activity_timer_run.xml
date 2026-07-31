@@ -39,19 +39,7 @@
             android:gravity="center_horizontal"
             android:orientation="vertical"
             android:paddingHorizontal="24dp"
-            android:paddingTop="8dp"
             android:paddingBottom="16dp">
-
-            <TextView
-                android:id="@+id/text_current_step_title"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:gravity="center"
-                android:textAppearance="?attr/textAppearanceTitleLarge"
-                android:textColor="?attr/colorOnSurface"
-                tools:text="Step 1: Autolyse" />
-
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
@@ -60,7 +48,24 @@
                 app:cardBackgroundColor="?attr/colorSurfaceContainer"
                 app:cardCornerRadius="20dp"
                 app:cardElevation="0dp"
-                app:strokeWidth="0dp">
+                app:strokeWidth="0dp"
+                >
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="20dp"
+                    android:paddingBottom="20dp"
+                    android:gravity="center"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/text_current_step_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:textAppearance="?attr/textAppearanceTitleLarge"
+                        android:textColor="?attr/colorOnSurface"
+                        tools:text="Step 1: Autolyse" />
 
                 <TextView
                     android:id="@+id/text_current_step_description"
@@ -68,10 +73,14 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:textAlignment="center"
-                    android:padding="20dp"
+                    android:paddingTop="10dp"
+                    android:paddingLeft="20dp"
+                    android:paddingRight="20dp"
                     android:textAppearance="?attr/textAppearanceBodyLarge"
                     android:textColor="?attr/colorOnSurface"
                     tools:text="Mix flour and water. Let it rest for 45 minutes." />
+
+                </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
 
@@ -79,6 +88,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
+                android:layout_marginBottom="24dp"
                 android:gravity="center"
                 android:orientation="vertical">
 
@@ -271,25 +281,8 @@
             android:id="@+id/layout_active_controls"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/button_skip"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/action_skip_step"
-                    app:icon="@drawable/ic_skip_next" />
-
-            </LinearLayout>
-
-        </LinearLayout>
+            android:orientation="vertical"
+            android:visibility="gone" />
 
     </LinearLayout>
 
