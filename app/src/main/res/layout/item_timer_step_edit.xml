@@ -45,6 +45,7 @@
                 tools:text="1" />
 
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_step_duration"
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -53,13 +54,20 @@
                 app:boxCornerRadiusBottomEnd="14dp"
                 app:boxCornerRadiusBottomStart="14dp"
                 app:boxCornerRadiusTopEnd="14dp"
-                app:boxCornerRadiusTopStart="14dp">
+                app:boxCornerRadiusTopStart="14dp"
+                app:endIconContentDescription="@string/cd_pick_duration"
+                app:endIconDrawable="@drawable/ic_alarm"
+                app:endIconMode="custom">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_step_duration"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="number" />
+                    android:clickable="true"
+                    android:cursorVisible="false"
+                    android:focusable="false"
+                    android:inputType="none"
+                    android:longClickable="false" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <ImageButton

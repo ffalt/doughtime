@@ -25,10 +25,16 @@
     <string name="action_add_step">Add step</string>
     <string name="action_save_timer">Save timer</string>
     <string name="hint_step_title">Step title</string>
-    <string name="hint_step_duration">Duration (minutes)</string>
+    <string name="hint_step_duration">Duration</string>
     <string name="hint_step_description">Step description (optional)</string>
     <string name="cd_remove_step">Remove step</string>
     <string name="cd_drag_step">Drag to reorder step</string>
+    <string name="cd_pick_duration">Choose duration</string>
+    <string name="unit_hours_short">h</string>
+    <string name="unit_minutes_short">min</string>
+    <string name="duration_hours_minutes">%1$d h %2$d min</string>
+    <string name="duration_hours">%1$d h</string>
+    <string name="duration_minutes">%1$d min</string>
     <string name="step_number">%1$d.</string>
 
     <!-- Run screen -->

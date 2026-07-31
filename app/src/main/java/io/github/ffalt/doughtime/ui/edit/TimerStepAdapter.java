@@ -13,6 +13,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+import com.google.android.material.textfield.TextInputLayout;
 import io.github.ffalt.doughtime.R;
 import io.github.ffalt.doughtime.data.entity.TimerStep;
 import java.util.Collections;
@@ -79,6 +80,7 @@ public class TimerStepAdapter extends RecyclerView.Adapter<TimerStepAdapter.Step
         private final TextView textStepNumber;
         private final EditText editTitle;
         private final EditText editDuration;
+        private final TextInputLayout layoutDuration;
         private final EditText editDescription;
         private TimerStep currentStep;
         private boolean binding;
@@ -88,6 +90,7 @@ public class TimerStepAdapter extends RecyclerView.Adapter<TimerStepAdapter.Step
             textStepNumber = itemView.findViewById(R.id.text_step_number);
             editTitle = itemView.findViewById(R.id.edit_step_title);
             editDuration = itemView.findViewById(R.id.edit_step_duration);
+            layoutDuration = itemView.findViewById(R.id.layout_step_duration);
             editDescription = itemView.findViewById(R.id.edit_step_description);
             ImageButton buttonRemove = itemView.findViewById(R.id.button_remove_step);
             ImageView imageDragHandle = itemView.findViewById(R.id.image_drag_handle);
@@ -102,17 +105,20 @@ public class TimerStepAdapter extends RecyclerView.Adapter<TimerStepAdapter.Step
                 }
             });
 
-            editDuration.addTextChangedListener(new SimpleTextWatcher() {
-                @Override
-                public void afterTextChanged(Editable s) {
-                    if (binding || currentStep == null) {
-                        return;
-                    }
-                    try {
-                        currentStep.durationSeconds = Long.parseLong(s.toString()) * 60;
-                    } catch (NumberFormatException ignored) { }
+            View.OnClickListener durationClickListener = v -> {
+                TimerStep step = currentStep;
+                if (step == null) {
+                    return;
                 }
-            });
+                DurationPickerSheet.show(itemView.getContext(), step.durationSeconds, durationSeconds -> {
+                    step.durationSeconds = durationSeconds;
+                    if (currentStep == step) {
+                        editDuration.setText(DurationPickerSheet.format(itemView.getContext(), durationSeconds));
+                    }
+                });
+            };
+            editDuration.setOnClickListener(durationClickListener);
+            layoutDuration.setEndIconOnClickListener(durationClickListener);
 
             editDescription.addTextChangedListener(new SimpleTextWatcher() {
                 @Override
@@ -155,7 +161,7 @@ public class TimerStepAdapter extends RecyclerView.Adapter<TimerStepAdapter.Step
             currentStep = step;
             bindStepNumber(position);
             editTitle.setText(step.title);
-            editDuration.setText(String.valueOf(step.durationSeconds / 60));
+            editDuration.setText(DurationPickerSheet.format(itemView.getContext(), step.durationSeconds));
             editDescription.setText(step.description);
             binding = false;
         }

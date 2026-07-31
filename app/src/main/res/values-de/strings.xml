@@ -25,10 +25,16 @@
     <string name="action_add_step">Schritt hinzufügen</string>
     <string name="action_save_timer">Timer speichern</string>
     <string name="hint_step_title">Schritt-Titel</string>
-    <string name="hint_step_duration">Dauer (Minuten)</string>
+    <string name="hint_step_duration">Dauer</string>
     <string name="hint_step_description">Schrittbeschreibung (optional)</string>
     <string name="cd_remove_step">Schritt entfernen</string>
     <string name="cd_drag_step">Zum Umsortieren ziehen</string>
+    <string name="cd_pick_duration">Dauer wählen</string>
+    <string name="unit_hours_short">Std.</string>
+    <string name="unit_minutes_short">Min.</string>
+    <string name="duration_hours_minutes">%1$d Std. %2$d Min.</string>
+    <string name="duration_hours">%1$d Std.</string>
+    <string name="duration_minutes">%1$d Min.</string>
     <string name="step_number">%1$d.</string>
 
     <!-- Laufbildschirm -->

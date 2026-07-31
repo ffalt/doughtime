@@ -82,11 +82,11 @@ public abstract class AppDatabase extends RoomDatabase {
             dao.insertTimerStep(new TimerStep(id,
                     appContext.getString(R.string.default_step_resting2_title),
                     appContext.getString(R.string.default_step_resting2_desc),
-                    30 * 60 * 60, 2));
+                    30 * 60, 2));
             dao.insertTimerStep(new TimerStep(id,
                     appContext.getString(R.string.default_step_preheat_title),
                     appContext.getString(R.string.default_step_preheat_desc),
-                    30 * 60 * 60, 3));
+                    30 * 60, 3));
             dao.insertTimerStep(new TimerStep(id,
                     appContext.getString(R.string.default_step_baking1_title),
                     appContext.getString(R.string.default_step_baking1_desc),
