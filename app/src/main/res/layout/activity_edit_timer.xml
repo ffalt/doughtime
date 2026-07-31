@@ -21,6 +21,7 @@
             app:titleEnabled="false">
 
             <LinearLayout
+                android:id="@+id/layout_edit_header"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="?attr/actionBarSize"
@@ -61,8 +62,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="textCapSentences|textMultiLine"
-                        android:minLines="1"
-                        android:maxLines="4" />
+                        android:maxLines="4"
+                        android:minLines="1" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <TextView
@@ -86,38 +87,39 @@
                 app:logo="@drawable/ic_toolbar_logo"
                 app:menu="@menu/menu_edit_timer"
                 app:navigationIcon="@drawable/ic_back"
-                app:titleMarginStart="8dp"
-                app:title="@string/title_edit_timer" />
+                app:title="@string/title_edit_timer"
+                app:titleMarginStart="8dp" />
 
         </com.google.android.material.appbar.CollapsingToolbarLayout>
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <LinearLayout
-        android:id="@+id/content_container"
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler_steps"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+        android:clipToPadding="false"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="8dp"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"
+        tools:listitem="@layout/item_timer_step_edit" />
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recycler_steps"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:clipToPadding="false"
-            android:paddingHorizontal="20dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="12dp"
-            tools:listitem="@layout/item_timer_step_edit" />
+    <LinearLayout
+        android:id="@+id/layout_add_step"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="?android:attr/colorBackground"
+        android:orientation="vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="12dp">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/button_add_step"
             style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="20dp"
-            android:layout_marginBottom="12dp"
             android:text="@string/action_add_step"
             app:icon="@drawable/ic_add" />
 

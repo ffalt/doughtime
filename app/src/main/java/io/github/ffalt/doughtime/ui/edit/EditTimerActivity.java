@@ -99,13 +99,40 @@ public class EditTimerActivity extends AppCompatActivity {
             recyclerSteps.smoothScrollToPosition(stepsList.size() - 1);
         });
 
-        View contentContainer = findViewById(R.id.content_container);
+        View header = findViewById(R.id.layout_edit_header);
+        View addStepBar = findViewById(R.id.layout_add_step);
+        int headerTopPadding = header.getPaddingTop();
+        int addStepBarBottomPadding = addStepBar.getPaddingBottom();
         ViewCompat.setOnApplyWindowInsetsListener(recyclerSteps.getRootView(), (v, windowInsets) -> {
             Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
             Insets imeInsets = windowInsets.getInsets(WindowInsetsCompat.Type.ime());
             v.setPadding(insets.left, 0, insets.right, 0);
-            contentContainer.setPadding(0, 0, 0, Math.max(insets.bottom, imeInsets.bottom));
+            header.setPadding(
+                    header.getPaddingLeft(),
+                    headerTopPadding + insets.top,
+                    header.getPaddingRight(),
+                    header.getPaddingBottom()
+            );
+            addStepBar.setPadding(
+                    addStepBar.getPaddingLeft(),
+                    addStepBar.getPaddingTop(),
+                    addStepBar.getPaddingRight(),
+                    addStepBarBottomPadding + Math.max(insets.bottom, imeInsets.bottom)
+            );
             return windowInsets;
+        });
+
+        // keep the last step scrollable clear of the pinned add-step bar
+        addStepBar.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+            int barHeight = bottom - top;
+            if (recyclerSteps.getPaddingBottom() != barHeight) {
+                recyclerSteps.setPadding(
+                        recyclerSteps.getPaddingLeft(),
+                        recyclerSteps.getPaddingTop(),
+                        recyclerSteps.getPaddingRight(),
+                        barHeight
+                );
+            }
         });
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
