@@ -34,25 +34,19 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class TimerRunActivity extends AppCompatActivity implements TimerService.TimerListener {
-    private static final int PREVIEW_DETAILS_LEFT_COLUMN_WIDTH = 24;
-    private static final int PREVIEW_DETAILS_RIGHT_COLUMN_WIDTH = 14;
-
     private TimerService timerService;
     private boolean isBound = false;
     private long timerId;
     private TimerWithSteps timerWithSteps;
-
     private TextView textStepTitle;
     private TextView textCountdown;
     private TextView textStepDescription;
     private MaterialButton buttonMinus5;
     private MaterialButton buttonPlus5;
-    private MaterialButton buttonStop;
     private LinearLayout layoutNextStepsItems;
     private LinearLayout layoutAlarmControls;
     private LinearLayout layoutActiveControls;
     private MaterialButton buttonPauseResumeIcon;
-    private MaterialButton buttonResetIcon;
     private MaterialButton buttonAlarmOk;
     private MaterialButton buttonStartNext;
     private final Handler repeatHandler = new Handler(Looper.getMainLooper());
@@ -150,8 +144,8 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         layoutAlarmControls = findViewById(R.id.layout_alarm_controls);
         layoutActiveControls = findViewById(R.id.layout_active_controls);
         buttonPauseResumeIcon = findViewById(R.id.button_pause_resume_icon);
-        buttonResetIcon = findViewById(R.id.button_reset_icon);
-        buttonStop = findViewById(R.id.button_stop_icon);
+        MaterialButton buttonResetIcon = findViewById(R.id.button_reset_icon);
+        MaterialButton buttonStop = findViewById(R.id.button_stop_icon);
         buttonAlarmOk = findViewById(R.id.button_alarm_ok);
         buttonStartNext = findViewById(R.id.button_start_next);
 
@@ -398,11 +392,9 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
             titleView.setText(itemPreview.titleText);
             if (itemPreview.isActive) {
                 itemView.setBackgroundResource(R.drawable.bg_active_step_preview);
-                // Use colorOnSecondaryContainer to ensure readability on secondaryContainer background
                 TypedValue typedValue = new TypedValue();
-                int colorOnSecondaryContainerRes = getResources().getIdentifier("colorOnSecondaryContainer", "attr", getPackageName());
-                if (colorOnSecondaryContainerRes != 0) {
-                    getTheme().resolveAttribute(colorOnSecondaryContainerRes, typedValue, true);
+                int attrId = com.google.android.material.R.attr.colorOnSecondaryContainer;
+                if (getTheme().resolveAttribute(attrId, typedValue, true)) {
                     int onColor = typedValue.data;
                     titleView.setTextColor(onColor);
                     durationView.setTextColor(onColor);
@@ -465,45 +457,23 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         );
     }
 
-    private static final class StepPreviewItem {
-        private final String titleText;
-        private final String leftDetailsText;
-        private final String rightDetailsText;
-        private final boolean isActive;
-        private final boolean isPast;
-
-        private StepPreviewItem(
-                String titleText,
-                String leftDetailsText,
-                String rightDetailsText,
-                boolean isActive,
-                boolean isPast
-        ) {
-            this.titleText = titleText;
-            this.leftDetailsText = leftDetailsText;
-            this.rightDetailsText = rightDetailsText;
-            this.isActive = isActive;
-            this.isPast = isPast;
-        }
+    private record StepPreviewItem(String titleText, String leftDetailsText,
+                                   String rightDetailsText, boolean isActive, boolean isPast) {
 
         private static StepPreviewItem withDetails(
-                String titleText,
-                String leftDetailsText,
-                String rightDetailsText,
-                boolean isActive,
-                boolean isPast
-        ) {
-            return new StepPreviewItem(titleText, leftDetailsText, rightDetailsText, isActive, isPast);
-        }
+                    String titleText,
+                    String leftDetailsText,
+                    String rightDetailsText,
+                    boolean isActive,
+                    boolean isPast
+            ) {
+                return new StepPreviewItem(titleText, leftDetailsText, rightDetailsText, isActive, isPast);
+            }
 
-        private static StepPreviewItem titleOnly(String titleText) {
-            return new StepPreviewItem(titleText, "", "", false, false);
+            private boolean hasDetails() {
+                return !leftDetailsText.isEmpty() || !rightDetailsText.isEmpty();
+            }
         }
-
-        private boolean hasDetails() {
-            return !leftDetailsText.isEmpty() || !rightDetailsText.isEmpty();
-        }
-    }
 
     static String formatDuration(long durationSeconds) {
         long safeDurationSeconds = Math.max(durationSeconds, 0);
