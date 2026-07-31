@@ -112,6 +112,9 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
                             repeatRunnable = null;
                         }
                         v.setPressed(false);
+                        if (event.getAction() == MotionEvent.ACTION_UP) {
+                            v.performClick();
+                        }
                         return true;
                 }
                 return false;

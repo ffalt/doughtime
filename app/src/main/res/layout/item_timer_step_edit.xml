@@ -23,6 +23,16 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
+            <ImageView
+                android:id="@+id/image_drag_handle"
+                android:layout_width="32dp"
+                android:layout_height="44dp"
+                android:layout_marginEnd="4dp"
+                android:contentDescription="@string/cd_drag_step"
+                android:scaleType="center"
+                android:src="@drawable/ic_drag_handle"
+                app:tint="?attr/colorOnSurfaceVariant" />
+
             <TextView
                 android:id="@+id/text_step_number"
                 android:layout_width="32dp"
@@ -39,17 +49,17 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:hint="@string/hint_step_title"
+                android:hint="@string/hint_step_duration"
                 app:boxCornerRadiusBottomEnd="14dp"
                 app:boxCornerRadiusBottomStart="14dp"
                 app:boxCornerRadiusTopEnd="14dp"
                 app:boxCornerRadiusTopStart="14dp">
 
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edit_step_title"
+                    android:id="@+id/edit_step_duration"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="textCapSentences" />
+                    android:inputType="number" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <ImageButton
@@ -69,17 +79,17 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:hint="@string/hint_step_duration"
+            android:hint="@string/hint_step_title"
             app:boxCornerRadiusBottomEnd="14dp"
             app:boxCornerRadiusBottomStart="14dp"
             app:boxCornerRadiusTopEnd="14dp"
             app:boxCornerRadiusTopStart="14dp">
 
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/edit_step_duration"
+                android:id="@+id/edit_step_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="number" />
+                android:inputType="textCapSentences" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout

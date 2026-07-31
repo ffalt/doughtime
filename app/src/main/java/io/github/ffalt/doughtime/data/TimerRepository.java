@@ -2,6 +2,7 @@ package io.github.ffalt.doughtime.data;
 
 import android.app.Application;
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.Transformations;
 import io.github.ffalt.doughtime.R;
 import io.github.ffalt.doughtime.data.dao.TimerDao;
 import io.github.ffalt.doughtime.data.database.AppDatabase;
@@ -22,7 +23,12 @@ public class TimerRepository {
         this.application = application;
         AppDatabase db = AppDatabase.getDatabase(application);
         timerDao = db.timerDao();
-        allTimers = timerDao.getAllTimersWithSteps();
+        allTimers = Transformations.map(timerDao.getAllTimersWithSteps(), timers -> {
+            for (TimerWithSteps timer : timers) {
+                timer.sortSteps();
+            }
+            return timers;
+        });
     }
 
     public LiveData<List<TimerWithSteps>> getAllTimers() {
@@ -58,6 +64,7 @@ public class TimerRepository {
         executorService.execute(() -> {
             TimerWithSteps original = timerDao.getTimerWithStepsByIdSync(timerId);
             if (original != null) {
+                original.sortSteps();
                 Timer newTimer = new Timer(
                         original.timer.title + application.getString(R.string.timer_copy_suffix),
                         original.timer.description

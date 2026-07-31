@@ -28,6 +28,7 @@
     <string name="hint_step_duration">Duration (minutes)</string>
     <string name="hint_step_description">Step description (optional)</string>
     <string name="cd_remove_step">Remove step</string>
+    <string name="cd_drag_step">Drag to reorder step</string>
     <string name="step_number">%1$d.</string>
 
     <!-- Run screen -->

@@ -384,6 +384,7 @@ public class TimerService extends Service {
             if (timer == null || timer.steps == null || stepIndex >= timer.steps.size()) {
                 return;
             }
+            timer.sortSteps();
 
             mainHandler.post(() -> {
                 ActiveTimer existingTimer = activeTimers.get(timerId);

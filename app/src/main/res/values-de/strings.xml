@@ -28,6 +28,7 @@
     <string name="hint_step_duration">Dauer (Minuten)</string>
     <string name="hint_step_description">Schrittbeschreibung (optional)</string>
     <string name="cd_remove_step">Schritt entfernen</string>
+    <string name="cd_drag_step">Zum Umsortieren ziehen</string>
     <string name="step_number">%1$d.</string>
 
     <!-- Laufbildschirm -->

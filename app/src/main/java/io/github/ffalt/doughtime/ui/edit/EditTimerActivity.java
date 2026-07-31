@@ -2,13 +2,14 @@ package io.github.ffalt.doughtime.ui.edit;
 
 import android.os.Bundle;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.EditText;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.annotation.NonNull;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import io.github.ffalt.doughtime.R;
@@ -42,8 +43,34 @@ public class EditTimerActivity extends AppCompatActivity {
         RecyclerView recyclerSteps = findViewById(R.id.recycler_steps);
         recyclerSteps.setLayoutManager(new LinearLayoutManager(this));
 
-        stepAdapter = new TimerStepAdapter(stepsList);
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(
+                ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) {
+            @Override
+            public boolean isLongPressDragEnabled() {
+                return false;
+            }
+
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView,
+                                  @NonNull RecyclerView.ViewHolder viewHolder,
+                                  @NonNull RecyclerView.ViewHolder target) {
+                int from = viewHolder.getBindingAdapterPosition();
+                int to = target.getBindingAdapterPosition();
+                if (from == RecyclerView.NO_POSITION || to == RecyclerView.NO_POSITION) {
+                    return false;
+                }
+                stepAdapter.moveStep(from, to);
+                return true;
+            }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+            }
+        });
+
+        stepAdapter = new TimerStepAdapter(stepsList, itemTouchHelper::startDrag);
         recyclerSteps.setAdapter(stepAdapter);
+        itemTouchHelper.attachToRecyclerView(recyclerSteps);
 
         if (timerId != -1) {
             viewModel.getAllTimers().observe(this, timers -> {
@@ -69,27 +96,27 @@ public class EditTimerActivity extends AppCompatActivity {
         findViewById(R.id.button_add_step).setOnClickListener(v -> {
             stepsList.add(new TimerStep(timerId != -1 ? timerId : 0, "", "", 0, stepsList.size()));
             stepAdapter.notifyItemInserted(stepsList.size() - 1);
+            recyclerSteps.smoothScrollToPosition(stepsList.size() - 1);
         });
 
-        findViewById(R.id.fab_save).setOnClickListener(v -> saveTimer());
-
+        View contentContainer = findViewById(R.id.content_container);
         ViewCompat.setOnApplyWindowInsetsListener(recyclerSteps.getRootView(), (v, windowInsets) -> {
             Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            Insets imeInsets = windowInsets.getInsets(WindowInsetsCompat.Type.ime());
             v.setPadding(insets.left, 0, insets.right, 0);
-
-            View fabSave = findViewById(R.id.fab_save);
-            ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) fabSave.getLayoutParams();
-            int margin = getResources().getDimensionPixelSize(R.dimen.fab_margin);
-            mlp.leftMargin = margin;
-            mlp.rightMargin = margin;
-            mlp.bottomMargin = insets.bottom + margin;
-            fabSave.setLayoutParams(mlp);
-
+            contentContainer.setPadding(0, 0, 0, Math.max(insets.bottom, imeInsets.bottom));
             return windowInsets;
         });
-        
+
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
+        toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_save) {
+                saveTimer();
+                return true;
+            }
+            return false;
+        });
     }
 
     private void saveTimer() {
@@ -97,6 +124,10 @@ public class EditTimerActivity extends AppCompatActivity {
         String description = editDescription.getText().toString();
         if (title.isEmpty()) {
             return;
+        }
+
+        for (int i = 0; i < stepsList.size(); i++) {
+            stepsList.get(i).stepOrder = i;
         }
 
         Timer timer = new Timer(title, description);
