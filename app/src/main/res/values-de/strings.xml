@@ -47,6 +47,10 @@
     <string name="action_stop">Stoppen</string>
     <string name="action_reset">Zurücksetzen</string>
     <string name="action_skip_step">Schritt überspringen</string>
+    <string name="dialog_stop_timer_title">Timer stoppen?</string>
+    <string name="dialog_stop_timer_message">Möchtest du den Timer wirklich stoppen?</string>
+    <string name="dialog_stop_timer_positive">Stoppen</string>
+    <string name="dialog_stop_timer_negative">Abbrechen</string>
 
     <!-- Dienst -->
     <string name="fgs_subtype_sourdough_process_timer">Sauerteig-Prozess-Timer</string>

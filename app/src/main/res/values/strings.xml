@@ -47,6 +47,10 @@
     <string name="action_stop">Stop</string>
     <string name="action_reset">Reset</string>
     <string name="action_skip_step">Skip step</string>
+    <string name="dialog_stop_timer_title">Stop Timer?</string>
+    <string name="dialog_stop_timer_message">Are you sure you want to stop the timer?</string>
+    <string name="dialog_stop_timer_positive">Stop</string>
+    <string name="dialog_stop_timer_negative">Cancel</string>
 
     <!-- Service -->
     <string name="fgs_subtype_sourdough_process_timer">Sourdough process timer</string>

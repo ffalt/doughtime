@@ -20,7 +20,24 @@
             app:contentInsetStartWithNavigation="0dp"
             app:logo="@drawable/ic_toolbar_logo"
             app:navigationIcon="@drawable/ic_back"
-            app:titleMarginStart="8dp" />
+            app:titleMarginStart="8dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button_stop_toolbar"
+                style="@style/Widget.Material3.Button.IconButton.Outlined"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="end"
+                android:layout_marginEnd="8dp"
+                android:padding="0dp"
+                app:icon="@drawable/ic_stop"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="20dp"
+                app:iconTint="?attr/colorError"
+                app:strokeColor="?attr/colorError" />
+
+        </com.google.android.material.appbar.MaterialToolbar>
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -117,6 +134,44 @@
 
                 </com.google.android.material.card.MaterialCardView>
 
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:gravity="center"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/button_pause_resume_icon"
+                        style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_marginBottom="8dp"
+                        android:insetLeft="0dp"
+                        android:insetTop="0dp"
+                        android:insetRight="0dp"
+                        android:insetBottom="0dp"
+                        app:icon="@drawable/ic_pause"
+                        app:iconGravity="textStart"
+                        app:iconPadding="0dp"
+                        app:iconSize="20dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/button_reset_icon"
+                        style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:insetLeft="0dp"
+                        android:insetTop="0dp"
+                        android:insetRight="0dp"
+                        android:insetBottom="0dp"
+                        app:icon="@drawable/ic_restart"
+                        app:iconGravity="textStart"
+                        app:iconPadding="0dp"
+                        app:iconSize="20dp" />
+
+                </LinearLayout>
+
             </LinearLayout>
 
             <com.google.android.material.card.MaterialCardView
@@ -186,25 +241,10 @@
                 android:orientation="horizontal">
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/button_stop_all"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
-                    android:layout_weight="1"
-                    android:text="@string/action_stop_all"
-                    android:textColor="?attr/colorError"
-                    app:icon="@drawable/ic_stop"
-                    app:iconTint="?attr/colorError"
-                    app:strokeColor="?attr/colorError" />
-
-                <com.google.android.material.button.MaterialButton
                     android:id="@+id/button_start_next"
                     style="@style/Widget.Material3.Button"
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
                     android:text="@string/action_start_next"
                     app:icon="@drawable/ic_skip_next" />
 
@@ -224,52 +264,10 @@
                 android:orientation="horizontal">
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/button_pause_resume"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="4dp"
-                    android:layout_weight="1"
-                    android:text="@string/action_pause"
-                    app:icon="@drawable/ic_pause" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/button_stop"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_weight="1"
-                    android:text="@string/action_stop"
-                    android:textColor="?attr/colorError"
-                    app:icon="@drawable/ic_stop"
-                    app:iconTint="?attr/colorError"
-                    app:strokeColor="?attr/colorError" />
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/button_reset"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="4dp"
-                    android:layout_weight="1"
-                    android:text="@string/action_reset"
-                    app:icon="@drawable/ic_restart" />
-
-                <com.google.android.material.button.MaterialButton
                     android:id="@+id/button_skip"
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
                     android:layout_weight="1"
                     android:text="@string/action_skip_step"
                     app:icon="@drawable/ic_skip_next" />

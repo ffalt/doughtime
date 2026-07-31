@@ -46,10 +46,12 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
     private TextView textStepDescription;
     private MaterialButton buttonMinus5;
     private MaterialButton buttonPlus5;
+    private MaterialButton buttonStopToolbar;
     private LinearLayout layoutNextStepsItems;
     private LinearLayout layoutAlarmControls;
     private LinearLayout layoutActiveControls;
-    private MaterialButton buttonPauseResume;
+    private MaterialButton buttonPauseResumeIcon;
+    private MaterialButton buttonResetIcon;
     private final Handler repeatHandler = new Handler(Looper.getMainLooper());
     private Runnable repeatRunnable;
 
@@ -144,13 +146,13 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         layoutNextStepsItems = findViewById(R.id.layout_next_steps_items);
         layoutAlarmControls = findViewById(R.id.layout_alarm_controls);
         layoutActiveControls = findViewById(R.id.layout_active_controls);
-        buttonPauseResume = findViewById(R.id.button_pause_resume);
+        buttonPauseResumeIcon = findViewById(R.id.button_pause_resume_icon);
+        buttonResetIcon = findViewById(R.id.button_reset_icon);
+        buttonStopToolbar = findViewById(R.id.button_stop_toolbar);
         MaterialButton buttonStartNext = findViewById(R.id.button_start_next);
-        MaterialButton buttonStopAll = findViewById(R.id.button_stop_all);
         MaterialButton buttonSkip = findViewById(R.id.button_skip);
-        MaterialButton buttonStop = findViewById(R.id.button_stop);
 
-        buttonPauseResume.setOnClickListener(v -> {
+        buttonPauseResumeIcon.setOnClickListener(v -> {
             TimerService.ActiveTimer activeTimer = timerService.getActiveTimer(timerId);
             if (activeTimer != null) {
                 if (activeTimer.timerRunning) {
@@ -161,10 +163,8 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
             }
         });
 
-        buttonStop.setOnClickListener(v -> {
-            timerService.stopTimer(timerId);
-            finish();
-        });
+
+        buttonStopToolbar.setOnClickListener(v -> showStopConfirmationDialog());
 
         buttonStartNext.setOnClickListener(v -> {
             TimerService.ActiveTimer activeTimer = timerService.getActiveTimer(timerId);
@@ -183,12 +183,7 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
             }
         });
 
-        buttonStopAll.setOnClickListener(v -> {
-            timerService.stopAllTimers();
-            finish();
-        });
-
-        findViewById(R.id.button_reset).setOnClickListener(v -> {
+        buttonResetIcon.setOnClickListener(v -> {
             TimerService.ActiveTimer activeTimer = timerService.getActiveTimer(timerId);
             if (activeTimer != null) {
                 timerService.startTimer(timerWithSteps, activeTimer.currentStepIndex);
@@ -244,6 +239,20 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         });
     }
 
+    private void showStopConfirmationDialog() {
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.dialog_stop_timer_title)
+                .setMessage(R.string.dialog_stop_timer_message)
+                .setPositiveButton(R.string.dialog_stop_timer_positive, (dialog, which) -> {
+                    if (timerService != null) {
+                        timerService.stopTimer(timerId);
+                    }
+                    finish();
+                })
+                .setNegativeButton(R.string.dialog_stop_timer_negative, null)
+                .show();
+    }
+
     private void updateUI() {
         if (timerWithSteps == null || timerService == null) {
             return;
@@ -293,7 +302,7 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
             layoutActiveControls.setVisibility(View.VISIBLE);
             layoutAlarmControls.setVisibility(View.GONE);
             buttonMinus5.setVisibility(View.VISIBLE);
-            buttonPauseResume.setText(activeTimer.timerRunning ? R.string.action_pause : R.string.action_resume);
+            buttonPauseResumeIcon.setIconResource(activeTimer.timerRunning ? R.drawable.ic_pause : R.drawable.ic_play);
         }
     }
 
