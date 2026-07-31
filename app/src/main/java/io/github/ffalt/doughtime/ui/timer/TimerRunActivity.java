@@ -34,9 +34,12 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class TimerRunActivity extends AppCompatActivity implements TimerService.TimerListener {
+    public static final String EXTRA_AUTO_START = "AUTO_START";
+
     private TimerService timerService;
     private boolean isBound = false;
     private long timerId;
+    private boolean autoStart = true;
     private TimerWithSteps timerWithSteps;
     private TextView textStepTitle;
     private TextView textCountdown;
@@ -47,6 +50,8 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
     private LinearLayout layoutAlarmControls;
     private LinearLayout layoutActiveControls;
     private MaterialButton buttonPauseResumeIcon;
+    private MaterialButton buttonResetIcon;
+    private MaterialButton buttonStopIcon;
     private MaterialButton buttonAlarmOk;
     private MaterialButton buttonStartNext;
     private final Handler repeatHandler = new Handler(Looper.getMainLooper());
@@ -62,7 +67,7 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
             
             TimerService.ActiveTimer activeTimer = timerService.getActiveTimer(timerId);
             if (activeTimer == null) {
-                loadTimerAndStart();
+                loadTimer();
             } else {
                 timerWithSteps = activeTimer.timer;
                 updateUI();
@@ -137,6 +142,7 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         setContentView(R.layout.activity_timer_run);
 
         timerId = getIntent().getLongExtra("TIMER_ID", -1);
+        autoStart = getIntent().getBooleanExtra(EXTRA_AUTO_START, true);
 
         textStepTitle = findViewById(R.id.text_current_step_title);
         textCountdown = findViewById(R.id.text_countdown);
@@ -147,24 +153,26 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         layoutAlarmControls = findViewById(R.id.layout_alarm_controls);
         layoutActiveControls = findViewById(R.id.layout_active_controls);
         buttonPauseResumeIcon = findViewById(R.id.button_pause_resume_icon);
-        MaterialButton buttonResetIcon = findViewById(R.id.button_reset_icon);
-        MaterialButton buttonStop = findViewById(R.id.button_stop_icon);
+        buttonResetIcon = findViewById(R.id.button_reset_icon);
+        buttonStopIcon = findViewById(R.id.button_stop_icon);
         buttonAlarmOk = findViewById(R.id.button_alarm_ok);
         buttonStartNext = findViewById(R.id.button_start_next);
 
         buttonPauseResumeIcon.setOnClickListener(v -> {
             TimerService.ActiveTimer activeTimer = timerService.getActiveTimer(timerId);
-            if (activeTimer != null) {
-                if (activeTimer.timerRunning) {
-                    timerService.pauseTimer(timerId);
-                } else {
-                    timerService.resumeTimer(timerId);
-                }
+            if (activeTimer == null) {
+                startFromFirstStep();
+                return;
+            }
+            if (activeTimer.timerRunning) {
+                timerService.pauseTimer(timerId);
+            } else {
+                timerService.resumeTimer(timerId);
             }
         });
 
 
-        buttonStop.setOnClickListener(v -> showStopConfirmationDialog());
+        buttonStopIcon.setOnClickListener(v -> showStopConfirmationDialog());
 
         buttonStartNext.setOnClickListener(v -> {
             TimerService.ActiveTimer activeTimer = timerService.getActiveTimer(timerId);
@@ -214,22 +222,36 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
 
     private void startTimerService() {
         Intent intent = new Intent(this, TimerService.class);
-        startService(intent);
+        if (autoStart) {
+            startService(intent);
+        }
         bindService(intent, connection, Context.BIND_AUTO_CREATE);
     }
 
-    private void loadTimerAndStart() {
+    private void loadTimer() {
         TimerViewModel viewModel = new ViewModelProvider(this).get(TimerViewModel.class);
         viewModel.getAllTimers().observe(this, timers -> {
             for (TimerWithSteps t : timers) {
                 if (t.timer.id == timerId) {
                     timerWithSteps = t;
-                    timerService.startTimer(t, 0);
+                    if (autoStart) {
+                        timerService.startTimer(t, 0);
+                    }
                     updateUI();
                     break;
                 }
             }
         });
+    }
+
+    private void startFromFirstStep() {
+        if (timerService == null || timerWithSteps == null || timerWithSteps.steps.isEmpty()) {
+            return;
+        }
+        // keep the service alive beyond this activity's binding
+        startService(new Intent(this, TimerService.class));
+        timerService.startTimer(timerWithSteps, 0);
+        updateUI();
     }
 
     private void showStopConfirmationDialog() {
@@ -251,28 +273,21 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
             return;
         }
 
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setTitle(timerWithSteps.timer.title);
+
         TimerService.ActiveTimer activeTimer = timerService.getActiveTimer(timerId);
         if (activeTimer == null) {
+            updateNotStartedUI();
             return;
         }
+
+        setNotStartedMode(false);
 
         int currentIndex = activeTimer.currentStepIndex;
         TimerStep currentStep = timerWithSteps.steps.get(currentIndex);
 
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setTitle(timerWithSteps.timer.title);
-
-        textStepTitle.setText(getString(
-                R.string.active_timer_step,
-                currentIndex + 1,
-                currentStep.title
-        ));
-        textStepDescription.setText(currentStep.description);
-        if (currentStep.description == null || currentStep.description.trim().isEmpty()) {
-            textStepDescription.setVisibility(View.GONE);
-        } else {
-            textStepDescription.setVisibility(View.VISIBLE);
-        }
+        showStep(currentIndex, currentStep);
 
         renderNextStepItems(buildStepItemPreviews(
                 timerWithSteps.steps,
@@ -305,6 +320,56 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
             layoutAlarmControls.setVisibility(View.GONE);
             buttonMinus5.setVisibility(View.VISIBLE);
             buttonPauseResumeIcon.setIconResource(activeTimer.timerRunning ? R.drawable.ic_pause : R.drawable.ic_play);
+        }
+    }
+
+    private void updateNotStartedUI() {
+        if (timerWithSteps.steps.isEmpty()) {
+            return;
+        }
+
+        setNotStartedMode(true);
+
+        TimerStep firstStep = timerWithSteps.steps.get(0);
+        showStep(0, firstStep);
+
+        long durationInMillis = Math.max(firstStep.durationSeconds, 0) * 1000L;
+        renderNextStepItems(buildStepItemPreviews(
+                timerWithSteps.steps,
+                0,
+                durationInMillis,
+                System.currentTimeMillis(),
+                getString(R.string.label_current_step),
+                getString(R.string.label_duration),
+                getString(R.string.label_ends_at)
+        ));
+        updateCountdown(durationInMillis);
+    }
+
+    private void setNotStartedMode(boolean notStarted) {
+        int visibility = notStarted ? View.GONE : View.VISIBLE;
+        buttonPlus5.setVisibility(visibility);
+        buttonMinus5.setVisibility(visibility);
+        buttonResetIcon.setVisibility(visibility);
+        buttonStopIcon.setVisibility(visibility);
+        if (notStarted) {
+            layoutActiveControls.setVisibility(View.GONE);
+            layoutAlarmControls.setVisibility(View.GONE);
+            buttonPauseResumeIcon.setIconResource(R.drawable.ic_play);
+        }
+    }
+
+    private void showStep(int stepIndex, TimerStep step) {
+        textStepTitle.setText(getString(
+                R.string.active_timer_step,
+                stepIndex + 1,
+                step.title
+        ));
+        textStepDescription.setText(step.description);
+        if (step.description == null || step.description.trim().isEmpty()) {
+            textStepDescription.setVisibility(View.GONE);
+        } else {
+            textStepDescription.setVisibility(View.VISIBLE);
         }
     }
 
@@ -417,7 +482,7 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
             }
 
             final int targetIndex = i;
-            if (!itemPreview.isActive) {
+            if (!itemPreview.isActive && timerService != null && timerService.getActiveTimer(timerId) != null) {
                 itemView.setOnLongClickListener(v -> {
                     if (timerService != null && timerWithSteps != null) {
                         new MaterialAlertDialogBuilder(this)

@@ -19,6 +19,8 @@ public class TimerAdapter extends ListAdapter<TimerWithSteps, TimerAdapter.Timer
     public interface OnTimerClickListener {
         void onStartClick(TimerWithSteps timer);
 
+        void onOpenClick(TimerWithSteps timer);
+
         void onEditClick(TimerWithSteps timer);
 
         void onDeleteClick(TimerWithSteps timer);
@@ -81,6 +83,7 @@ public class TimerAdapter extends ListAdapter<TimerWithSteps, TimerAdapter.Timer
                     timer.steps.size()
             ));
 
+            itemView.setOnClickListener(v -> listener.onOpenClick(timer));
             buttonStart.setOnClickListener(v -> listener.onStartClick(timer));
             buttonOptions.setOnClickListener(v -> {
                 android.widget.PopupMenu popup = new android.widget.PopupMenu(v.getContext(), v);

@@ -222,6 +222,14 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
     }
 
     @Override
+    public void onOpenClick(TimerWithSteps timer) {
+        Intent intent = new Intent(this, TimerRunActivity.class);
+        intent.putExtra("TIMER_ID", timer.timer.id);
+        intent.putExtra(TimerRunActivity.EXTRA_AUTO_START, false);
+        startActivity(intent);
+    }
+
+    @Override
     public void onEditClick(TimerWithSteps timer) {
         Intent intent = new Intent(this, EditTimerActivity.class);
         intent.putExtra("TIMER_ID", timer.timer.id);
