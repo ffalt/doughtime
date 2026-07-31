@@ -359,7 +359,7 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
     }
 
     private void showStep(TimerStep step) {
-        textStepTitle.setText(step.title);
+        textStepTitle.setText(step.displayTitle());
         textStepDescription.setText(step.description);
         if (step.description == null || step.description.trim().isEmpty()) {
             textStepDescription.setVisibility(View.GONE);
@@ -417,7 +417,7 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
             TimerStep step = steps.get(i);
             boolean isActive = (i == currentStepIndex);
             boolean isPast = (i < currentStepIndex);
-            String title = step.title;
+            String title = step.displayTitle();
             if (isActive) {
                 title = currentLabel + ": " + title;
             }

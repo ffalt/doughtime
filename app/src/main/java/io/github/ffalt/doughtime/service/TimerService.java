@@ -632,7 +632,7 @@ public class TimerService extends Service {
             int seconds = (int) (at.timeLeftInMillis % 60000 / 1000);
             String timeStr = String.format(java.util.Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds);
             contentText = at.timerRunning
-                    ? at.timer.steps.get(at.currentStepIndex).title
+                    ? at.timer.steps.get(at.currentStepIndex).displayTitle()
                     : getString(R.string.notification_status_paused_with_time, timeStr);
             if (!at.timerRunning && at.timeLeftInMillis == 0) {
                 contentText = getString(R.string.label_time_is_up);

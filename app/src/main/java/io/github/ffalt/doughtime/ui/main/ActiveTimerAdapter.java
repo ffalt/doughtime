@@ -84,7 +84,7 @@ public class ActiveTimerAdapter extends RecyclerView.Adapter<ActiveTimerAdapter.
                 title = itemView.getContext().getString(R.string.active_timer_paused_title, title);
             }
             textTitle.setText(title);
-            textStep.setText(activeTimer.timer.steps.get(activeTimer.currentStepIndex).title);
+            textStep.setText(activeTimer.timer.steps.get(activeTimer.currentStepIndex).displayTitle());
 
             long millis = activeTimer.timeLeftInMillis;
             int hours = (int) (millis / 3600000);
