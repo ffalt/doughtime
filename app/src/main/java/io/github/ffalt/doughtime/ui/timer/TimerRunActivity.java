@@ -14,17 +14,21 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.lifecycle.ViewModelProvider;
+
 import com.google.android.material.button.MaterialButton;
+
 import io.github.ffalt.doughtime.R;
 import io.github.ffalt.doughtime.data.entity.TimerStep;
 import io.github.ffalt.doughtime.data.entity.TimerWithSteps;
 import io.github.ffalt.doughtime.service.TimerService;
 import io.github.ffalt.doughtime.ui.main.TimerViewModel;
+
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -64,7 +68,7 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
             timerService = binder.getService();
             isBound = true;
             timerService.addListener(TimerRunActivity.this);
-            
+
             TimerService.ActiveTimer activeTimer = timerService.getActiveTimer(timerId);
             if (activeTimer == null) {
                 loadTimer();
@@ -95,10 +99,10 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
                         if (repeatRunnable != null) {
                             repeatHandler.removeCallbacks(repeatRunnable);
                         }
-                        
+
                         // Perform first adjustment
                         adjustTimer(delta);
-                        
+
                         repeatRunnable = new Runnable() {
                             @Override
                             public void run() {
@@ -121,8 +125,9 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
                             v.performClick();
                         }
                         return true;
+                    default:
+                        return false;
                 }
-                return false;
             }
         };
 
@@ -300,12 +305,12 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
 
         long timeLeft = activeTimer.timeLeftInMillis;
         updateCountdown(timeLeft);
-        
+
         if (timeLeft == 0 && !activeTimer.timerRunning) {
             layoutActiveControls.setVisibility(View.GONE);
             layoutAlarmControls.setVisibility(View.VISIBLE);
             buttonMinus5.setVisibility(View.GONE);
-            
+
             // Show OK button only if alarm is actually playing
             if (activeTimer.isAlarmPlaying) {
                 buttonAlarmOk.setVisibility(View.VISIBLE);
@@ -402,17 +407,17 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         // For steps before current, we don't know exactly when they ended relative to now
         // if we just have currentStepTimeLeft. But we can estimate based on durations
         // for visualization purposes. Actually, it might be better to show them as "Past".
-        
+
         long currentStepEndTime = nowInMillis + Math.max(currentStepTimeLeftInMillis, 0);
         endTimes[currentStepIndex] = currentStepEndTime;
-        
+
         // Future steps
         long rollingTime = currentStepEndTime;
         for (int i = currentStepIndex + 1; i < steps.size(); i++) {
             rollingTime += Math.max(steps.get(i).durationSeconds, 0) * 1000L;
             endTimes[i] = rollingTime;
         }
-        
+
         // Past steps (working backwards)
         rollingTime = nowInMillis - (steps.get(currentStepIndex).durationSeconds * 1000L - currentStepTimeLeftInMillis);
         for (int i = currentStepIndex - 1; i >= 0; i--) {
@@ -422,8 +427,8 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
 
         for (int i = 0; i < steps.size(); i++) {
             TimerStep step = steps.get(i);
-            boolean isActive = (i == currentStepIndex);
-            boolean isPast = (i < currentStepIndex);
+            boolean isActive = i == currentStepIndex;
+            boolean isPast = i < currentStepIndex;
             String title = step.displayTitle();
             if (isActive) {
                 title = currentLabel + ": " + title;
@@ -531,19 +536,19 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
                                    String rightDetailsText, boolean isActive, boolean isPast) {
 
         private static StepPreviewItem withDetails(
-                    String titleText,
-                    String leftDetailsText,
-                    String rightDetailsText,
-                    boolean isActive,
-                    boolean isPast
-            ) {
-                return new StepPreviewItem(titleText, leftDetailsText, rightDetailsText, isActive, isPast);
-            }
-
-            private boolean hasDetails() {
-                return !leftDetailsText.isEmpty() || !rightDetailsText.isEmpty();
-            }
+                String titleText,
+                String leftDetailsText,
+                String rightDetailsText,
+                boolean isActive,
+                boolean isPast
+        ) {
+            return new StepPreviewItem(titleText, leftDetailsText, rightDetailsText, isActive, isPast);
         }
+
+        private boolean hasDetails() {
+            return !leftDetailsText.isEmpty() || !rightDetailsText.isEmpty();
+        }
+    }
 
     static String formatDuration(long durationSeconds) {
         long safeDurationSeconds = Math.max(durationSeconds, 0);
