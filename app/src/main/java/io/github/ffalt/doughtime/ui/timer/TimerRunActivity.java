@@ -286,8 +286,7 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
 
         int currentIndex = activeTimer.currentStepIndex;
         TimerStep currentStep = timerWithSteps.steps.get(currentIndex);
-
-        showStep(currentIndex, currentStep);
+        showStep(currentStep);
 
         renderNextStepItems(buildStepItemPreviews(
                 timerWithSteps.steps,
@@ -331,7 +330,7 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         setNotStartedMode(true);
 
         TimerStep firstStep = timerWithSteps.steps.get(0);
-        showStep(0, firstStep);
+        showStep(firstStep);
 
         long durationInMillis = Math.max(firstStep.durationSeconds, 0) * 1000L;
         renderNextStepItems(buildStepItemPreviews(
@@ -359,12 +358,8 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         }
     }
 
-    private void showStep(int stepIndex, TimerStep step) {
-        textStepTitle.setText(getString(
-                R.string.active_timer_step,
-                stepIndex + 1,
-                step.title
-        ));
+    private void showStep(TimerStep step) {
+        textStepTitle.setText(step.title);
         textStepDescription.setText(step.description);
         if (step.description == null || step.description.trim().isEmpty()) {
             textStepDescription.setVisibility(View.GONE);

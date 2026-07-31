@@ -15,7 +15,6 @@
         <item quantity="other">%1$d steps</item>
     </plurals>
     <string name="active_timer_paused_title">%1$s (Paused)</string>
-    <string name="active_timer_step">Step %1$d: %2$s</string>
 
     <!-- Edit screen -->
     <string name="title_edit_timer">Edit timer</string>
