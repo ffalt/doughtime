@@ -1,4 +1,17 @@
 
+## [v0.0.4](https://github.com/ffalt/doughtime/compare/v0.0.4) (2026-07-31)
+
+### Features
+
+ -  **step**  on the last step, button text is "Close" not "Next" ([0b5a84673df1dad](https://github.com/ffalt/doughtime/commit/0b5a84673df1dade7d9e7653473c4cf677603a6c))
+ -  **timer**  allow open the timer without starting it ([1eef838fa6bcbf2](https://github.com/ffalt/doughtime/commit/1eef838fa6bcbf26d35fd1fb94a42e19e8311856))
+
+### Bug Fixes
+
+ -  **step**  show - for empty titles ([a63ffc69b61f261](https://github.com/ffalt/doughtime/commit/a63ffc69b61f2612e5f21969dd2e8d73fecc5d82))
+ -  **timer run**  adjust button margin ([41a2b3c022ec704](https://github.com/ffalt/doughtime/commit/41a2b3c022ec70463a75ce88c79f256a86f60427))
+ -  **timer edit**  do not scroll add step button ([1e9782ce6b525d1](https://github.com/ffalt/doughtime/commit/1e9782ce6b525d17d17893094f33e9fd5bb8ccdc))
+
 ## [v0.0.3](https://github.com/ffalt/doughtime/compare/v0.0.3) (2026-07-31)
 
 ### Features

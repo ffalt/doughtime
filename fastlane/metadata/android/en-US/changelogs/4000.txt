@@ -1,0 +1,5 @@
+ -  **step**  show - for empty titles
+ -  **step**  on the last step, button text is "Close" not "Next"
+ -  **timer run**  adjust button margin
+ -  **timer edit**  do not scroll add step button
+ -  **timer**  allow open the timer without starting it
