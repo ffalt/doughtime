@@ -31,11 +31,9 @@
 
     <!-- Laufbildschirm -->
     <string name="label_previous_step">Vorheriger: %1$s</string>
-    <string name="label_next_steps">Nächste Schritte:</string>
     <string name="label_current_step">Aktuell</string>
     <string name="label_duration">Dauer</string>
     <string name="label_ends_at">Endet um</string>
-    <string name="label_final_step">Letzter Schritt</string>
     <string name="label_time_is_up">Zeit ist um!</string>
     <string name="notification_channel_timer_service">Timer-Service-Kanal</string>
     <string name="notification_status_paused_with_time">Pausiert: %1$s</string>

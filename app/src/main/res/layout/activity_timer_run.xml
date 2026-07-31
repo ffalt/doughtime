@@ -96,22 +96,14 @@
                     android:id="@+id/text_current_step_description"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:textAlignment="center"
                     android:padding="20dp"
                     android:textAppearance="?attr/textAppearanceBodyLarge"
                     android:textColor="?attr/colorOnSurface"
                     tools:text="Mix flour and water. Let it rest for 45 minutes." />
 
             </com.google.android.material.card.MaterialCardView>
-
-            <TextView
-                android:id="@+id/text_next_steps"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:alpha="0.85"
-                android:text="@string/label_next_steps"
-                android:textAppearance="?attr/textAppearanceLabelLarge"
-                android:textColor="?attr/colorOnSurfaceVariant" />
 
             <LinearLayout
                 android:id="@+id/layout_next_steps_items"

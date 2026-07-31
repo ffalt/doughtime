@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.LinearLayout;
@@ -40,7 +41,6 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
     private TextView textStepTitle;
     private TextView textCountdown;
     private TextView textStepDescription;
-    private TextView textNextSteps;
     private TextView textPreviousStep;
     private LinearLayout layoutNextStepsItems;
     private LinearLayout layoutAlarmControls;
@@ -81,7 +81,6 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         textStepTitle = findViewById(R.id.text_current_step_title);
         textCountdown = findViewById(R.id.text_countdown);
         textStepDescription = findViewById(R.id.text_current_step_description);
-        textNextSteps = findViewById(R.id.text_next_steps);
         layoutNextStepsItems = findViewById(R.id.layout_next_steps_items);
         layoutAlarmControls = findViewById(R.id.layout_alarm_controls);
         layoutActiveControls = findViewById(R.id.layout_active_controls);
@@ -205,6 +204,11 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
                 currentStep.title
         ));
         textStepDescription.setText(currentStep.description);
+        if (currentStep.description == null || currentStep.description.trim().isEmpty()) {
+            ((View) textStepDescription.getParent()).setVisibility(View.GONE);
+        } else {
+            ((View) textStepDescription.getParent()).setVisibility(View.VISIBLE);
+        }
 
         if (currentIndex > 0) {
             textPreviousStep.setVisibility(View.VISIBLE);
@@ -216,17 +220,14 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
             textPreviousStep.setVisibility(View.GONE);
         }
 
-        textNextSteps.setVisibility(View.VISIBLE);
-        textNextSteps.setText(getString(R.string.label_next_steps));
-        renderNextStepItems(buildNextStepItemPreviews(
+        renderNextStepItems(buildStepItemPreviews(
                 timerWithSteps.steps,
                 currentIndex,
                 activeTimer.timeLeftInMillis,
                 System.currentTimeMillis(),
                 getString(R.string.label_current_step),
                 getString(R.string.label_duration),
-                getString(R.string.label_ends_at),
-                getString(R.string.label_final_step)
+                getString(R.string.label_ends_at)
         ));
 
         long timeLeft = activeTimer.timeLeftInMillis;
@@ -249,57 +250,71 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         textCountdown.setText(String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds));
     }
 
-    private static List<NextStepPreviewItem> buildNextStepItemPreviews(
+    private static List<StepPreviewItem> buildStepItemPreviews(
             List<TimerStep> steps,
             int currentStepIndex,
             long currentStepTimeLeftInMillis,
             long nowInMillis,
             String currentLabel,
             String durationLabel,
-            String endsAtLabel,
-            String finalStepLabel
+            String endsAtLabel
     ) {
-        List<NextStepPreviewItem> itemPreviews = new ArrayList<>();
+        List<StepPreviewItem> itemPreviews = new ArrayList<>();
         if (steps.isEmpty() || currentStepIndex < 0 || currentStepIndex >= steps.size()) {
             return itemPreviews;
         }
 
-        TimerStep currentStep = steps.get(currentStepIndex);
-        long currentStepEndTimeInMillis = nowInMillis + Math.max(currentStepTimeLeftInMillis, 0);
-        itemPreviews.add(buildPreviewItem(
-                currentLabel + ": " + currentStep.title,
-                durationLabel,
-                formatDuration(currentStep.durationSeconds),
-                endsAtLabel,
-                currentStepEndTimeInMillis
-        ));
+        // Calculate all end times relative to current moment
+        long[] endTimes = new long[steps.size()];
 
-        if (currentStepIndex + 1 >= steps.size()) {
-            itemPreviews.add(NextStepPreviewItem.titleOnly(finalStepLabel));
-            return itemPreviews;
-        }
-
-        long stepStartTimeInMillis = currentStepEndTimeInMillis;
+        // For steps before current, we don't know exactly when they ended relative to now
+        // if we just have currentStepTimeLeft. But we can estimate based on durations
+        // for visualization purposes. Actually, it might be better to show them as "Past".
+        
+        long currentStepEndTime = nowInMillis + Math.max(currentStepTimeLeftInMillis, 0);
+        endTimes[currentStepIndex] = currentStepEndTime;
+        
+        // Future steps
+        long rollingTime = currentStepEndTime;
         for (int i = currentStepIndex + 1; i < steps.size(); i++) {
-            TimerStep nextStep = steps.get(i);
-            long stepEndTimeInMillis = stepStartTimeInMillis + Math.max(nextStep.durationSeconds, 0) * 1000;
-            itemPreviews.add(buildPreviewItem(
-                    nextStep.title,
-                    durationLabel,
-                    formatDuration(nextStep.durationSeconds),
-                    endsAtLabel,
-                    stepEndTimeInMillis
-            ));
-
-            stepStartTimeInMillis = stepEndTimeInMillis;
+            rollingTime += Math.max(steps.get(i).durationSeconds, 0) * 1000L;
+            endTimes[i] = rollingTime;
         }
+        
+        // Past steps (working backwards)
+        rollingTime = nowInMillis - (steps.get(currentStepIndex).durationSeconds * 1000L - currentStepTimeLeftInMillis);
+        for (int i = currentStepIndex - 1; i >= 0; i--) {
+            endTimes[i] = rollingTime;
+            rollingTime -= Math.max(steps.get(i).durationSeconds, 0) * 1000L;
+        }
+
+        for (int i = 0; i < steps.size(); i++) {
+            TimerStep step = steps.get(i);
+            boolean isActive = (i == currentStepIndex);
+            boolean isPast = (i < currentStepIndex);
+            String title = step.title;
+            if (isActive) {
+                title = currentLabel + ": " + title;
+            }
+
+            itemPreviews.add(buildPreviewItem(
+                    title,
+                    durationLabel,
+                    formatDuration(step.durationSeconds),
+                    endsAtLabel,
+                    endTimes[i],
+                    isActive,
+                    isPast
+            ));
+        }
+
         return itemPreviews;
     }
 
-    private void renderNextStepItems(List<NextStepPreviewItem> itemPreviews) {
+    private void renderNextStepItems(List<StepPreviewItem> itemPreviews) {
         layoutNextStepsItems.removeAllViews();
         LayoutInflater inflater = LayoutInflater.from(this);
-        for (NextStepPreviewItem itemPreview : itemPreviews) {
+        for (StepPreviewItem itemPreview : itemPreviews) {
             View itemView = inflater.inflate(
                     R.layout.item_next_step_preview,
                     layoutNextStepsItems,
@@ -312,6 +327,23 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
             TextView endsAtView = itemView.findViewById(R.id.text_next_step_ends_at);
 
             titleView.setText(itemPreview.titleText);
+            if (itemPreview.isActive) {
+                itemView.setBackgroundResource(R.drawable.bg_active_step_preview);
+                // Use colorOnSecondaryContainer to ensure readability on secondaryContainer background
+                TypedValue typedValue = new TypedValue();
+                int colorOnSecondaryContainerRes = getResources().getIdentifier("colorOnSecondaryContainer", "attr", getPackageName());
+                if (colorOnSecondaryContainerRes != 0) {
+                    getTheme().resolveAttribute(colorOnSecondaryContainerRes, typedValue, true);
+                    int onColor = typedValue.data;
+                    titleView.setTextColor(onColor);
+                    durationView.setTextColor(onColor);
+                    endsAtView.setTextColor(onColor);
+                }
+            } else if (itemPreview.isPast) {
+                titleView.setAlpha(0.6f);
+                detailsLayout.setAlpha(0.6f);
+            }
+
             if (itemPreview.hasDetails()) {
                 detailsLayout.setVisibility(View.VISIBLE);
                 durationView.setText(itemPreview.leftDetailsText);
@@ -324,41 +356,57 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         }
     }
 
-    private static NextStepPreviewItem buildPreviewItem(
+    private static StepPreviewItem buildPreviewItem(
             String titleText,
             String durationLabel,
             String durationText,
             String endsAtLabel,
-            long endTimeInMillis
+            long endTimeInMillis,
+            boolean isActive,
+            boolean isPast
     ) {
-        return NextStepPreviewItem.withDetails(
+        return StepPreviewItem.withDetails(
                 titleText,
                 durationLabel + " " + durationText,
-                endsAtLabel + " " + formatClockTime(endTimeInMillis)
+                endsAtLabel + " " + formatClockTime(endTimeInMillis),
+                isActive,
+                isPast
         );
     }
 
-    private static final class NextStepPreviewItem {
+    private static final class StepPreviewItem {
         private final String titleText;
         private final String leftDetailsText;
         private final String rightDetailsText;
+        private final boolean isActive;
+        private final boolean isPast;
 
-        private NextStepPreviewItem(String titleText, String leftDetailsText, String rightDetailsText) {
+        private StepPreviewItem(
+                String titleText,
+                String leftDetailsText,
+                String rightDetailsText,
+                boolean isActive,
+                boolean isPast
+        ) {
             this.titleText = titleText;
             this.leftDetailsText = leftDetailsText;
             this.rightDetailsText = rightDetailsText;
+            this.isActive = isActive;
+            this.isPast = isPast;
         }
 
-        private static NextStepPreviewItem withDetails(
+        private static StepPreviewItem withDetails(
                 String titleText,
                 String leftDetailsText,
-                String rightDetailsText
+                String rightDetailsText,
+                boolean isActive,
+                boolean isPast
         ) {
-            return new NextStepPreviewItem(titleText, leftDetailsText, rightDetailsText);
+            return new StepPreviewItem(titleText, leftDetailsText, rightDetailsText, isActive, isPast);
         }
 
-        private static NextStepPreviewItem titleOnly(String titleText) {
-            return new NextStepPreviewItem(titleText, "", "");
+        private static StepPreviewItem titleOnly(String titleText) {
+            return new StepPreviewItem(titleText, "", "", false, false);
         }
 
         private boolean hasDetails() {

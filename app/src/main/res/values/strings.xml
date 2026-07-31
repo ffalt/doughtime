@@ -31,11 +31,9 @@
 
     <!-- Run screen -->
     <string name="label_previous_step">Previous: %1$s</string>
-    <string name="label_next_steps">Next steps:</string>
     <string name="label_current_step">Current</string>
     <string name="label_duration">Duration</string>
     <string name="label_ends_at">Ends at</string>
-    <string name="label_final_step">Final step</string>
     <string name="label_time_is_up">Time\'s up!</string>
     <string name="notification_channel_timer_service">Timer Service Channel</string>
     <string name="notification_status_paused_with_time">Paused: %1$s</string>
