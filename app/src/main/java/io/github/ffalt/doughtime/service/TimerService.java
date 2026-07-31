@@ -7,9 +7,13 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.media.AudioAttributes;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+import android.os.VibratorManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.CountDownTimer;
@@ -46,6 +50,7 @@ public class TimerService extends Service {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService recoveryExecutor = Executors.newSingleThreadExecutor();
     private Ringtone ringtone;
+    private Vibrator vibrator;
     private AlarmManager alarmManager;
 
     public interface TimerListener {
@@ -82,6 +87,12 @@ public class TimerService extends Service {
         super.onCreate();
         createNotificationChannel();
         alarmManager = getSystemService(AlarmManager.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            VibratorManager vibratorManager = getSystemService(VibratorManager.class);
+            vibrator = vibratorManager.getDefaultVibrator();
+        } else {
+            vibrator = getSystemService(Vibrator.class);
+        }
     }
 
     @Override
@@ -459,13 +470,44 @@ public class TimerService extends Service {
 
     private void playAlarm() {
         Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
+        if (notification == null) {
+            notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+        }
+        if (notification == null) {
+            notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+        }
+        
         ringtone = RingtoneManager.getRingtone(getApplicationContext(), notification);
-        ringtone.play();
+        if (ringtone != null) {
+            AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build();
+            ringtone.setAudioAttributes(audioAttributes);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                ringtone.setLooping(true);
+            }
+            ringtone.play();
+        }
+
+        if (vibrator != null && vibrator.hasVibrator()) {
+            long[] pattern = {0, 500, 500};
+            AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build();
+            @SuppressWarnings("deprecation")
+            VibrationEffect effect = VibrationEffect.createWaveform(pattern, 0);
+            vibrator.vibrate(effect, audioAttributes);
+        }
     }
 
     private void stopAlarm() {
         if (ringtone != null && ringtone.isPlaying()) {
             ringtone.stop();
+        }
+        if (vibrator != null) {
+            vibrator.cancel();
         }
     }
 
@@ -495,7 +537,7 @@ public class TimerService extends Service {
             int seconds = (int) (at.timeLeftInMillis % 60000 / 1000);
             String timeStr = String.format(java.util.Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds);
             contentText = at.timerRunning
-                    ? getString(R.string.active_timer_step, at.currentStepIndex + 1, timeStr)
+                    ? at.timer.steps.get(at.currentStepIndex).title
                     : getString(R.string.notification_status_paused_with_time, timeStr);
             if (!at.timerRunning && at.timeLeftInMillis == 0) {
                 contentText = getString(R.string.label_time_is_up);
