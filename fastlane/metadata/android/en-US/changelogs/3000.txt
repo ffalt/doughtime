@@ -1,0 +1,9 @@
+ -  **edit**  add a duration picker
+ -  **edit**  support drag & drop reordering
+ -  **main screen**  add a label above the active timer list
+ -  **alarm**  stop alarm playing on click on notification and active timer entry
+ -  **step list**  allow switching to steps in the step preview list
+ -  **timer buttons**  move all timer buttons below the clock
+ -  **timer buttons**  add +/- timer adjustment buttons with long press for quick changes
+ -  **step list**  always show all steps in active timer, mark active one
+ -  **alarm**  ensure an actual alarm sound is playing, add vibrate
