@@ -5,9 +5,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -41,11 +44,14 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
     private TextView textStepTitle;
     private TextView textCountdown;
     private TextView textStepDescription;
-    private TextView textPreviousStep;
+    private MaterialButton buttonMinus5;
+    private MaterialButton buttonPlus5;
     private LinearLayout layoutNextStepsItems;
     private LinearLayout layoutAlarmControls;
     private LinearLayout layoutActiveControls;
     private MaterialButton buttonPauseResume;
+    private final Handler repeatHandler = new Handler(Looper.getMainLooper());
+    private Runnable repeatRunnable;
 
     private final ServiceConnection connection = new ServiceConnection() {
         @Override
@@ -70,6 +76,59 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         }
     };
 
+    private void setupAdjustmentButtons() {
+        View.OnTouchListener touchListener = new View.OnTouchListener() {
+            private static final long INITIAL_DELAY = 500;
+            private static final long REPEAT_INTERVAL = 100;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                int id = v.getId();
+                long delta = (id == R.id.button_plus_5) ? 300_000L : -300_000L;
+
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        if (repeatRunnable != null) {
+                            repeatHandler.removeCallbacks(repeatRunnable);
+                        }
+                        
+                        // Perform first adjustment
+                        adjustTimer(delta);
+                        
+                        repeatRunnable = new Runnable() {
+                            @Override
+                            public void run() {
+                                adjustTimer(delta);
+                                repeatHandler.postDelayed(this, REPEAT_INTERVAL);
+                            }
+                        };
+                        repeatHandler.postDelayed(repeatRunnable, INITIAL_DELAY);
+                        v.setPressed(true);
+                        return true;
+
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        if (repeatRunnable != null) {
+                            repeatHandler.removeCallbacks(repeatRunnable);
+                            repeatRunnable = null;
+                        }
+                        v.setPressed(false);
+                        return true;
+                }
+                return false;
+            }
+        };
+
+        buttonMinus5.setOnTouchListener(touchListener);
+        buttonPlus5.setOnTouchListener(touchListener);
+    }
+
+    private void adjustTimer(long deltaMillis) {
+        if (timerService != null) {
+            timerService.adjustTimer(timerId, deltaMillis);
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -77,9 +136,10 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
 
         timerId = getIntent().getLongExtra("TIMER_ID", -1);
 
-        textPreviousStep = findViewById(R.id.text_previous_step);
         textStepTitle = findViewById(R.id.text_current_step_title);
         textCountdown = findViewById(R.id.text_countdown);
+        buttonMinus5 = findViewById(R.id.button_minus_5);
+        buttonPlus5 = findViewById(R.id.button_plus_5);
         textStepDescription = findViewById(R.id.text_current_step_description);
         layoutNextStepsItems = findViewById(R.id.layout_next_steps_items);
         layoutAlarmControls = findViewById(R.id.layout_alarm_controls);
@@ -150,6 +210,8 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
             }
         });
 
+        setupAdjustmentButtons();
+
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
 
@@ -210,16 +272,6 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
             ((View) textStepDescription.getParent()).setVisibility(View.VISIBLE);
         }
 
-        if (currentIndex > 0) {
-            textPreviousStep.setVisibility(View.VISIBLE);
-            textPreviousStep.setText(getString(
-                    R.string.label_previous_step,
-                    timerWithSteps.steps.get(currentIndex - 1).title
-            ));
-        } else {
-            textPreviousStep.setVisibility(View.GONE);
-        }
-
         renderNextStepItems(buildStepItemPreviews(
                 timerWithSteps.steps,
                 currentIndex,
@@ -236,9 +288,11 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         if (timeLeft == 0 && !activeTimer.timerRunning) {
             layoutActiveControls.setVisibility(View.GONE);
             layoutAlarmControls.setVisibility(View.VISIBLE);
+            buttonMinus5.setVisibility(View.GONE);
         } else {
             layoutActiveControls.setVisibility(View.VISIBLE);
             layoutAlarmControls.setVisibility(View.GONE);
+            buttonMinus5.setVisibility(View.VISIBLE);
             buttonPauseResume.setText(activeTimer.timerRunning ? R.string.action_pause : R.string.action_resume);
         }
     }

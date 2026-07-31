@@ -287,6 +287,51 @@ public class TimerService extends Service {
         }
     }
 
+    public void adjustTimer(long timerId, long deltaMillis) {
+        ActiveTimer activeTimer = activeTimers.get(timerId);
+        if (activeTimer == null) {
+            return;
+        }
+
+        if (activeTimer.isAlarmPlaying) {
+            if (deltaMillis > 0) {
+                // Stop alarm and start next or same step with delta as initial time
+                stopAlarmOnly(timerId);
+                activeTimer.timeLeftInMillis = deltaMillis;
+                activeTimer.timerRunning = true;
+                runTimer(activeTimer);
+                for (TimerListener listener : listeners) {
+                    listener.onStatusChanged(timerId);
+                }
+            }
+            // Ignore minus when alarm is playing (should be hidden in UI anyway)
+            return;
+        }
+
+        long newTimeLeft = Math.max(0, activeTimer.timeLeftInMillis + deltaMillis);
+        if (newTimeLeft == activeTimer.timeLeftInMillis) {
+            return;
+        }
+
+        activeTimer.timeLeftInMillis = newTimeLeft;
+
+        if (activeTimer.timerRunning) {
+            if (activeTimer.countDownTimer != null) {
+                activeTimer.countDownTimer.cancel();
+            }
+            if (newTimeLeft > 0) {
+                runTimer(activeTimer);
+            } else {
+                finishTimerStep(activeTimer, activeTimer.currentStepIndex);
+            }
+        } else {
+            for (TimerListener listener : listeners) {
+                listener.onTick(timerId, newTimeLeft);
+            }
+        }
+        updateNotification();
+    }
+
     private void checkAlarms() {
         boolean anyAlarm = false;
         for (ActiveTimer at : activeTimers.values()) {
