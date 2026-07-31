@@ -48,6 +48,7 @@
         <item quantity="other">%1$d Timer aktiv</item>
     </plurals>
     <string name="action_start_next">Nächsten starten</string>
+    <string name="action_close">Schließen</string>
     <string name="action_pause">Pausieren</string>
     <string name="action_resume">Fortsetzen</string>
     <string name="action_reset">Zurücksetzen</string>

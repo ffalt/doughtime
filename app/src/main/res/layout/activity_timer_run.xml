@@ -276,7 +276,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/button_start_next"
-                    style="@style/Widget.Material3.Button.TextButton"
+                    style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"

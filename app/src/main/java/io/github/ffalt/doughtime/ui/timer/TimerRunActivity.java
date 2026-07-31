@@ -177,9 +177,9 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         buttonStartNext.setOnClickListener(v -> {
             TimerService.ActiveTimer activeTimer = timerService.getActiveTimer(timerId);
             if (activeTimer != null) {
+                timerService.stopAlarmOnly(timerId);
                 int nextStep = activeTimer.currentStepIndex + 1;
                 if (nextStep < timerWithSteps.steps.size()) {
-                    timerService.stopAlarmOnly(timerId);
                     timerService.startTimer(timerWithSteps, nextStep);
                     layoutAlarmControls.setVisibility(View.GONE);
                     layoutActiveControls.setVisibility(View.VISIBLE);
@@ -313,6 +313,13 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
             } else {
                 buttonAlarmOk.setVisibility(View.GONE);
                 buttonStartNext.setVisibility(View.VISIBLE);
+                if (currentIndex + 1 < timerWithSteps.steps.size()) {
+                    buttonStartNext.setText(R.string.action_start_next);
+                    buttonStartNext.setIconResource(R.drawable.ic_skip_next);
+                } else {
+                    buttonStartNext.setText(R.string.action_close);
+                    buttonStartNext.setIcon(null);
+                }
             }
         } else {
             layoutActiveControls.setVisibility(View.VISIBLE);
