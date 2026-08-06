@@ -1,4 +1,11 @@
 
+## [v0.0.6](https://github.com/ffalt/doughtime/compare/v0.0.6) (2026-08-06)
+
+
+### Bug Fixes
+
+ -  **active timer**  when timer is done, allow increasing the current time and start again ([eaadb6d89c1fd1b](https://github.com/ffalt/doughtime/commit/eaadb6d89c1fd1b4c538ea5e8fa591a2e6d45179))
+
 ## [v0.0.5](https://github.com/ffalt/doughtime/compare/v0.0.5) (2026-07-31)
 
 

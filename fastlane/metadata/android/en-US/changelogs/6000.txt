@@ -1,0 +1,1 @@
+ -  **active timer**  when timer is done, allow increasing the current time and start again
