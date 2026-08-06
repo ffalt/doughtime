@@ -303,6 +303,7 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
             layoutActiveControls.setVisibility(View.GONE);
             layoutAlarmControls.setVisibility(View.VISIBLE);
             buttonMinus5.setVisibility(View.GONE);
+            buttonPauseResumeIcon.setIconResource(R.drawable.ic_play);
 
             // Show OK button only if alarm is actually playing
             if (activeTimer.isAlarmPlaying) {
@@ -374,9 +375,9 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         buttonResetIcon.setVisibility(visibility);
         buttonStopIcon.setVisibility(visibility);
         if (notStarted) {
+            buttonPauseResumeIcon.setIconResource(R.drawable.ic_play);
             layoutActiveControls.setVisibility(View.GONE);
             layoutAlarmControls.setVisibility(View.GONE);
-            buttonPauseResumeIcon.setIconResource(R.drawable.ic_play);
         }
     }
 
