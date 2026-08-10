@@ -596,10 +596,6 @@ public class TimerService extends Service {
             }
         }
 
-        Intent intent = new Intent(this, io.github.ffalt.doughtime.MainActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivity(intent);
-
         if (alarmWasPlaying) {
             updateNotification();
         }
@@ -616,10 +612,15 @@ public class TimerService extends Service {
     }
 
     private Notification getNotification() {
-        Intent notificationIntent = new Intent(this, TimerService.class);
+        Intent notificationIntent = new Intent(this, io.github.ffalt.doughtime.MainActivity.class);
         notificationIntent.setAction(ACTION_NOTIFICATION_CLICK);
-        PendingIntent pendingIntent = PendingIntent.getService(this,
-                0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        notificationIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                this,
+                0,
+                notificationIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
 
         String title = getString(R.string.app_name);
         String contentText;
