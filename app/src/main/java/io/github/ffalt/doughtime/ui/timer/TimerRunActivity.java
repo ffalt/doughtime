@@ -137,7 +137,18 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
 
     private void adjustTimer(long deltaMillis) {
         if (timerService != null) {
-            timerService.adjustTimer(timerId, deltaMillis);
+            TimerService.ActiveTimer activeTimer = timerService.getActiveTimer(timerId);
+            if (activeTimer == null) {
+                return;
+            }
+
+            long boundedDelta = deltaMillis;
+            if (deltaMillis < 0) {
+                long maxDecrement = Math.max(activeTimer.timeLeftInMillis, 0);
+                boundedDelta = Math.max(deltaMillis, -maxDecrement);
+            }
+
+            timerService.adjustTimer(timerId, boundedDelta);
             refreshStepPreviews();
         }
     }
@@ -302,7 +313,6 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         if (timeLeft == 0 && !activeTimer.timerRunning) {
             layoutActiveControls.setVisibility(View.GONE);
             layoutAlarmControls.setVisibility(View.VISIBLE);
-            buttonMinus5.setVisibility(View.GONE);
             buttonPauseResumeIcon.setIconResource(R.drawable.ic_play);
 
             // Show OK button only if alarm is actually playing
