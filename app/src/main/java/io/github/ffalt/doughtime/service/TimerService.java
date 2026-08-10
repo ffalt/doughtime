@@ -517,6 +517,14 @@ public class TimerService extends Service {
         return currentStepIndex != expectedStepIndex;
     }
 
+    static String formatTimeLeft(long timeLeftInMillis) {
+        long safeTimeLeft = Math.max(0, timeLeftInMillis);
+        int hours = (int) (safeTimeLeft / 3600000);
+        int minutes = (int) (safeTimeLeft % 3600000 / 60000);
+        int seconds = (int) (safeTimeLeft % 60000 / 1000);
+        return String.format(java.util.Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds);
+    }
+
     static boolean canTogglePauseResumeFromNotification(
             boolean timerRunning,
             boolean isAlarmPlaying,
@@ -617,14 +625,23 @@ public class TimerService extends Service {
         }
     }
 
-    private long getFirstActiveTimerId() {
-        long firstTimerId = -1L;
-        for (long timerId : activeTimers.keySet()) {
-            if (firstTimerId < 0 || timerId < firstTimerId) {
+    @Nullable
+    private ActiveTimer getFirstActiveTimer() {
+        ActiveTimer firstActiveTimer = null;
+        long firstTimerId = Long.MAX_VALUE;
+        for (java.util.Map.Entry<Long, ActiveTimer> entry : activeTimers.entrySet()) {
+            long timerId = entry.getKey();
+            if (timerId < firstTimerId) {
                 firstTimerId = timerId;
+                firstActiveTimer = entry.getValue();
             }
         }
-        return firstTimerId;
+        return firstActiveTimer;
+    }
+
+    private long getFirstActiveTimerId() {
+        ActiveTimer firstActiveTimer = getFirstActiveTimer();
+        return firstActiveTimer == null ? -1L : firstActiveTimer.timer.timer.id;
     }
 
     private void createNotificationChannel() {
@@ -651,17 +668,18 @@ public class TimerService extends Service {
         String title = getString(R.string.app_name);
         String contentText;
 
-        if (activeTimers.size() == 1) {
-            ActiveTimer at = activeTimers.values().iterator().next();
-            title = at.timer.timer.title;
-            int hours = (int) (at.timeLeftInMillis / 3600000);
-            int minutes = (int) (at.timeLeftInMillis % 3600000 / 60000);
-            int seconds = (int) (at.timeLeftInMillis % 60000 / 1000);
-            String timeStr = String.format(java.util.Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds);
-            contentText = at.timerRunning
-                    ? at.timer.steps.get(at.currentStepIndex).displayTitle()
+        ActiveTimer notificationTimer = getFirstActiveTimer();
+        if (notificationTimer != null) {
+            title = notificationTimer.timer.timer.title;
+            String timeStr = formatTimeLeft(notificationTimer.timeLeftInMillis);
+            contentText = notificationTimer.timerRunning
+                    ? getString(
+                            R.string.notification_running_with_time,
+                            notificationTimer.timer.steps.get(notificationTimer.currentStepIndex).displayTitle(),
+                            timeStr
+                    )
                     : getString(R.string.notification_status_paused_with_time, timeStr);
-            if (!at.timerRunning && at.timeLeftInMillis == 0) {
+            if (!notificationTimer.timerRunning && notificationTimer.timeLeftInMillis == 0) {
                 contentText = getString(R.string.label_time_is_up);
             }
         } else {

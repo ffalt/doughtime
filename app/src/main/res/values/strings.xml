@@ -43,6 +43,7 @@
     <string name="label_time_is_up">Time\'s up!</string>
     <string name="notification_channel_timer_service">Timer Service Channel</string>
     <string name="notification_status_paused_with_time">Paused: %1$s</string>
+    <string name="notification_running_with_time">%1$s - %2$s</string>
     <plurals name="notification_timers_active">
         <item quantity="one">%1$d timer active</item>
         <item quantity="other">%1$d timers active</item>
