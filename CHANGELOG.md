@@ -1,4 +1,14 @@
 
+## [v0.0.7](https://github.com/ffalt/doughtime/compare/v0.0.7) (2026-08-10)
+
+### Features
+
+ -  **timer**  always show time decrease button ([6e41f3c869a1a94](https://github.com/ffalt/doughtime/commit/6e41f3c869a1a94a896bc2b73b0a7d61d3657c33))
+
+### Bug Fixes
+
+ -  **notification**  open activity on notification click ([d90b5341c8d7a49](https://github.com/ffalt/doughtime/commit/d90b5341c8d7a49c769a24199e1eb786338b8670))
+
 ## [v0.0.6](https://github.com/ffalt/doughtime/compare/v0.0.6) (2026-08-06)
 
 

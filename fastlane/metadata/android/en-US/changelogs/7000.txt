@@ -1,0 +1,2 @@
+ -  **timer**  always show time decrease button
+ -  **notification**  open activity on notification click
