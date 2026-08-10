@@ -117,15 +117,7 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
             return windowInsets;
         });
 
-        handleNotificationIntent(getIntent());
         checkNotificationPermission();
-    }
-
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        setIntent(intent);
-        handleNotificationIntent(intent);
     }
 
     private void checkNotificationPermission() {
@@ -205,15 +197,6 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
                 adapter.submitList(allTimers);
             }
         }
-    }
-
-    private void handleNotificationIntent(Intent intent) {
-        if (intent == null || !TimerService.ACTION_NOTIFICATION_CLICK.equals(intent.getAction())) {
-            return;
-        }
-        Intent clickIntent = new Intent(this, TimerService.class);
-        clickIntent.setAction(TimerService.ACTION_NOTIFICATION_CLICK);
-        startService(clickIntent);
     }
 
     @Override

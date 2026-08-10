@@ -120,7 +120,8 @@ public class TimerService extends Service {
                 return START_NOT_STICKY;
             }
             if (ACTION_NOTIFICATION_CLICK.equals(action)) {
-                handleNotificationClick();
+                long timerId = intent.getLongExtra(EXTRA_TIMER_ID, -1L);
+                handleNotificationClick(timerId);
                 return START_NOT_STICKY;
             }
             if (ACTION_EXACT_ALARM_FIRED.equals(action)) {
@@ -587,7 +588,7 @@ public class TimerService extends Service {
         }
     }
 
-    private void handleNotificationClick() {
+    private void handleNotificationClick(long requestedTimerId) {
         boolean alarmWasPlaying = false;
         for (ActiveTimer at : activeTimers.values()) {
             if (at.isAlarmPlaying) {
@@ -596,9 +597,34 @@ public class TimerService extends Service {
             }
         }
 
+        long targetTimerId = requestedTimerId;
+        if (targetTimerId < 0) {
+            targetTimerId = getFirstActiveTimerId();
+        }
+
+        Intent activityIntent;
+        if (targetTimerId >= 0) {
+            activityIntent = new Intent(this, io.github.ffalt.doughtime.ui.timer.TimerRunActivity.class);
+            activityIntent.putExtra("TIMER_ID", targetTimerId);
+        } else {
+            activityIntent = new Intent(this, io.github.ffalt.doughtime.MainActivity.class);
+        }
+        activityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        startActivity(activityIntent);
+
         if (alarmWasPlaying) {
             updateNotification();
         }
+    }
+
+    private long getFirstActiveTimerId() {
+        long firstTimerId = -1L;
+        for (long timerId : activeTimers.keySet()) {
+            if (firstTimerId < 0 || timerId < firstTimerId) {
+                firstTimerId = timerId;
+            }
+        }
+        return firstTimerId;
     }
 
     private void createNotificationChannel() {
@@ -612,10 +638,10 @@ public class TimerService extends Service {
     }
 
     private Notification getNotification() {
-        Intent notificationIntent = new Intent(this, io.github.ffalt.doughtime.MainActivity.class);
+        Intent notificationIntent = new Intent(this, TimerService.class);
         notificationIntent.setAction(ACTION_NOTIFICATION_CLICK);
-        notificationIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent pendingIntent = PendingIntent.getActivity(
+        notificationIntent.putExtra(EXTRA_TIMER_ID, getFirstActiveTimerId());
+        PendingIntent pendingIntent = PendingIntent.getService(
                 this,
                 0,
                 notificationIntent,
