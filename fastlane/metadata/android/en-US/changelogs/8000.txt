@@ -1,0 +1,2 @@
+ -  **notification**  show rest time in notification message
+ -  **notification**  open timer activity on notification click

@@ -1,4 +1,14 @@
 
+## [v0.0.8](https://github.com/ffalt/doughtime/compare/v0.0.8) (2026-08-10)
+
+### Features
+
+ -  **notification**  show rest time in notification message ([4c37143cdb115b1](https://github.com/ffalt/doughtime/commit/4c37143cdb115b1acac3f99ed6f2022f7755c9a4))
+
+### Bug Fixes
+
+ -  **notification**  open timer activity on notification click ([721fbf9e971400d](https://github.com/ffalt/doughtime/commit/721fbf9e971400d25bc2d566aab1f28b36025210))
+
 ## [v0.0.7](https://github.com/ffalt/doughtime/compare/v0.0.7) (2026-08-10)
 
 ### Features
