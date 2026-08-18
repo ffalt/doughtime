@@ -19,6 +19,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.material.button.MaterialButton;
@@ -41,7 +43,7 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
     public static final String EXTRA_AUTO_START = "AUTO_START";
 
     private TimerService timerService;
-    private boolean isBound = false;
+    private boolean bindRequested = false;
     private long timerId;
     private boolean autoStart = true;
     private TimerWithSteps timerWithSteps;
@@ -52,7 +54,6 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
     private MaterialButton buttonPlus5;
     private LinearLayout layoutNextStepsItems;
     private LinearLayout layoutAlarmControls;
-    private LinearLayout layoutActiveControls;
     private MaterialButton buttonPauseResumeIcon;
     private MaterialButton buttonResetIcon;
     private MaterialButton buttonStopIcon;
@@ -66,7 +67,6 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         public void onServiceConnected(ComponentName name, IBinder service) {
             TimerService.LocalBinder binder = (TimerService.LocalBinder) service;
             timerService = binder.getService();
-            isBound = true;
             timerService.addListener(TimerRunActivity.this);
 
             TimerService.ActiveTimer activeTimer = timerService.getActiveTimer(timerId);
@@ -80,7 +80,7 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            isBound = false;
+            timerService = null;
         }
     };
 
@@ -100,7 +100,6 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
                             repeatHandler.removeCallbacks(repeatRunnable);
                         }
 
-                        // Perform first adjustment
                         adjustTimer(delta);
 
                         repeatRunnable = new Runnable() {
@@ -149,7 +148,7 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
             }
 
             timerService.adjustTimer(timerId, boundedDelta);
-            refreshStepPreviews();
+            updateUI();
         }
     }
 
@@ -170,7 +169,6 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         textStepDescription = findViewById(R.id.text_current_step_description);
         layoutNextStepsItems = findViewById(R.id.layout_next_steps_items);
         layoutAlarmControls = findViewById(R.id.layout_alarm_controls);
-        layoutActiveControls = findViewById(R.id.layout_active_controls);
         buttonPauseResumeIcon = findViewById(R.id.button_pause_resume_icon);
         buttonResetIcon = findViewById(R.id.button_reset_icon);
         buttonStopIcon = findViewById(R.id.button_stop_icon);
@@ -178,6 +176,9 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         buttonStartNext = findViewById(R.id.button_start_next);
 
         buttonPauseResumeIcon.setOnClickListener(v -> {
+            if (timerService == null) {
+                return;
+            }
             TimerService.ActiveTimer activeTimer = timerService.getActiveTimer(timerId);
             if (activeTimer == null) {
                 startFromFirstStep();
@@ -194,6 +195,9 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         buttonStopIcon.setOnClickListener(v -> showStopConfirmationDialog());
 
         buttonStartNext.setOnClickListener(v -> {
+            if (timerService == null) {
+                return;
+            }
             TimerService.ActiveTimer activeTimer = timerService.getActiveTimer(timerId);
             if (activeTimer != null) {
                 timerService.stopAlarmOnly(timerId);
@@ -201,7 +205,6 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
                 if (nextStep < timerWithSteps.steps.size()) {
                     timerService.startTimer(timerWithSteps, nextStep);
                     layoutAlarmControls.setVisibility(View.GONE);
-                    layoutActiveControls.setVisibility(View.VISIBLE);
                     updateUI();
                 } else {
                     timerService.stopTimer(timerId);
@@ -218,6 +221,9 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         });
 
         buttonResetIcon.setOnClickListener(v -> {
+            if (timerService == null) {
+                return;
+            }
             TimerService.ActiveTimer activeTimer = timerService.getActiveTimer(timerId);
             if (activeTimer != null) {
                 timerService.startTimer(timerWithSteps, activeTimer.currentStepIndex);
@@ -244,20 +250,28 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         if (autoStart) {
             startService(intent);
         }
+        bindRequested = true;
         bindService(intent, connection, Context.BIND_AUTO_CREATE);
     }
 
     private void loadTimer() {
         TimerViewModel viewModel = new ViewModelProvider(this).get(TimerViewModel.class);
-        viewModel.getAllTimers().observe(this, timers -> {
-            for (TimerWithSteps t : timers) {
-                if (t.timer.id == timerId) {
+        LiveData<List<TimerWithSteps>> allTimers = viewModel.getAllTimers();
+        allTimers.observe(this, new Observer<>() {
+            @Override
+            public void onChanged(List<TimerWithSteps> timers) {
+                for (TimerWithSteps t : timers) {
+                    if (t.timer.id != timerId) {
+                        continue;
+                    }
+                    allTimers.removeObserver(this);
                     timerWithSteps = t;
-                    if (autoStart) {
+                    if (autoStart && timerService != null
+                            && timerService.getActiveTimer(timerId) == null) {
                         timerService.startTimer(t, 0);
                     }
                     updateUI();
-                    break;
+                    return;
                 }
             }
         });
@@ -267,7 +281,6 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         if (timerService == null || timerWithSteps == null || timerWithSteps.steps.isEmpty()) {
             return;
         }
-        // keep the service alive beyond this activity's binding
         startService(new Intent(this, TimerService.class));
         timerService.startTimer(timerWithSteps, 0);
         updateUI();
@@ -313,11 +326,10 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         updateCountdown(timeLeft);
 
         if (timeLeft == 0 && !activeTimer.timerRunning) {
-            layoutActiveControls.setVisibility(View.GONE);
+            buttonPauseResumeIcon.setVisibility(View.GONE);
+            buttonMinus5.setVisibility(View.GONE);
             layoutAlarmControls.setVisibility(View.VISIBLE);
             buttonPauseResumeIcon.setIconResource(R.drawable.ic_play);
-
-            // Show OK button only if alarm is actually playing
             if (activeTimer.isAlarmPlaying) {
                 buttonAlarmOk.setVisibility(View.VISIBLE);
                 buttonStartNext.setVisibility(View.GONE);
@@ -333,8 +345,8 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
                 }
             }
         } else {
-            layoutActiveControls.setVisibility(View.VISIBLE);
             layoutAlarmControls.setVisibility(View.GONE);
+            buttonPauseResumeIcon.setVisibility(View.VISIBLE);
             buttonMinus5.setVisibility(View.VISIBLE);
             buttonPauseResumeIcon.setIconResource(activeTimer.timerRunning ? R.drawable.ic_pause : R.drawable.ic_play);
         }
@@ -388,7 +400,7 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         buttonStopIcon.setVisibility(visibility);
         if (notStarted) {
             buttonPauseResumeIcon.setIconResource(R.drawable.ic_play);
-            layoutActiveControls.setVisibility(View.GONE);
+            buttonPauseResumeIcon.setVisibility(View.VISIBLE);
             layoutAlarmControls.setVisibility(View.GONE);
         }
     }
@@ -424,24 +436,16 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
             return itemPreviews;
         }
 
-        // Calculate all end times relative to current moment
         long[] endTimes = new long[steps.size()];
-
-        // For steps before current, we don't know exactly when they ended relative to now
-        // if we just have currentStepTimeLeft. But we can estimate based on durations
-        // for visualization purposes. Actually, it might be better to show them as "Past".
 
         long currentStepEndTime = nowInMillis + Math.max(currentStepTimeLeftInMillis, 0);
         endTimes[currentStepIndex] = currentStepEndTime;
-
-        // Future steps
         long rollingTime = currentStepEndTime;
         for (int i = currentStepIndex + 1; i < steps.size(); i++) {
             rollingTime += Math.max(steps.get(i).durationSeconds, 0) * 1000L;
             endTimes[i] = rollingTime;
         }
 
-        // Past steps (working backwards)
         rollingTime = nowInMillis - (steps.get(currentStepIndex).durationSeconds * 1000L - currentStepTimeLeftInMillis);
         for (int i = currentStepIndex - 1; i >= 0; i--) {
             endTimes[i] = rollingTime;
@@ -522,7 +526,6 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
                                     timerService.stopAlarmOnly(timerId);
                                     timerService.startTimer(timerWithSteps, targetIndex);
                                     layoutAlarmControls.setVisibility(View.GONE);
-                                    layoutActiveControls.setVisibility(View.VISIBLE);
                                     updateUI();
                                 })
                                 .setNegativeButton(R.string.dialog_cancel, null)
@@ -613,6 +616,11 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
     @Override
     public void onStatusChanged(long changedTimerId) {
         if (this.timerId == changedTimerId) {
+            TimerService.ActiveTimer activeTimer =
+                    timerService == null ? null : timerService.getActiveTimer(timerId);
+            if (activeTimer != null) {
+                timerWithSteps = activeTimer.timer;
+            }
             updateUI();
         }
     }
@@ -620,10 +628,13 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (isBound) {
-            timerService.removeListener(this);
+        repeatHandler.removeCallbacksAndMessages(null);
+        if (bindRequested) {
+            if (timerService != null) {
+                timerService.removeListener(this);
+            }
             unbindService(connection);
-            isBound = false;
+            bindRequested = false;
         }
     }
 }

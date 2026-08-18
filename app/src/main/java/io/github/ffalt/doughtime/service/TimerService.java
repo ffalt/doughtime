@@ -8,7 +8,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.media.AudioAttributes;
-import android.media.Ringtone;
+import android.media.MediaPlayer;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.PowerManager;
@@ -23,8 +23,11 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.Observer;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.TaskStackBuilder;
 
@@ -32,15 +35,16 @@ import io.github.ffalt.doughtime.R;
 import io.github.ffalt.doughtime.data.database.AppDatabase;
 import io.github.ffalt.doughtime.data.entity.TimerWithSteps;
 
+import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class TimerService extends Service {
+    private static final String TAG = TimerService.class.getSimpleName();
     private static final String CHANNEL_ID = "TimerServiceChannel";
     private static final String ALARM_CHANNEL_ID = "TimerAlarmChannel";
     private static final int NOTIFICATION_ID = 1;
     private static final int ALARM_NOTIFICATION_ID = 2;
-    public static final String ACTION_STOP = "io.github.ffalt.doughtime.ACTION_STOP";
     public static final String ACTION_NOTIFICATION_TOGGLE_PAUSE_RESUME =
             "io.github.ffalt.doughtime.ACTION_NOTIFICATION_TOGGLE_PAUSE_RESUME";
     public static final String ACTION_NOTIFICATION_START_NEXT =
@@ -53,16 +57,22 @@ public class TimerService extends Service {
     private static final int REQUEST_CODE_OFFSET_NOTIFICATION_START_NEXT = 20_000;
     private static final int REQUEST_CODE_OFFSET_NOTIFICATION_CONTENT = 30_000;
     private static final int REQUEST_CODE_OFFSET_ALARM_CONTENT = 40_000;
+    private static final long NO_ALARM_NOTIFICATION = -1L;
+    private static final long ALARM_TIMEOUT_MILLIS = 600_000L;
 
     private final IBinder binder = new LocalBinder();
     private final java.util.Map<Long, ActiveTimer> activeTimers = new java.util.HashMap<>();
     private final java.util.List<TimerListener> listeners = new java.util.ArrayList<>();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService recoveryExecutor = Executors.newSingleThreadExecutor();
-    private Ringtone ringtone;
+    private MediaPlayer alarmPlayer;
     private Vibrator vibrator;
     private AlarmManager alarmManager;
     private PowerManager.WakeLock alarmWakeLock;
+    private long alarmNotificationTimerId = NO_ALARM_NOTIFICATION;
+    private final Runnable alarmTimeoutRunnable = this::timeOutAlarm;
+    private LiveData<java.util.List<TimerWithSteps>> storedTimers;
+    private final Observer<java.util.List<TimerWithSteps>> storedTimersObserver = this::syncWithStoredTimers;
 
     public interface TimerListener {
         void onTick(long timerId, long millisUntilFinished);
@@ -104,16 +114,14 @@ public class TimerService extends Service {
         } else {
             vibrator = getSystemService(Vibrator.class);
         }
+        storedTimers = AppDatabase.getDatabase(this).timerDao().getAllTimersWithSteps();
+        storedTimers.observeForever(storedTimersObserver);
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null) {
             String action = intent.getAction();
-            if (ACTION_STOP.equals(action)) {
-                stopAllTimers();
-                return START_NOT_STICKY;
-            }
             if (ACTION_NOTIFICATION_TOGGLE_PAUSE_RESUME.equals(action)) {
                 long timerId = intent.getLongExtra(EXTRA_TIMER_ID, -1L);
                 togglePauseResumeTimer(timerId);
@@ -125,6 +133,7 @@ public class TimerService extends Service {
                 return START_NOT_STICKY;
             }
             if (ACTION_EXACT_ALARM_FIRED.equals(action)) {
+                startForeground(NOTIFICATION_ID, getNotification());
                 long timerId = intent.getLongExtra(EXTRA_TIMER_ID, -1L);
                 int stepIndex = intent.getIntExtra(EXTRA_STEP_INDEX, -1);
                 handleExactAlarmFired(timerId, stepIndex);
@@ -132,12 +141,6 @@ public class TimerService extends Service {
             }
         }
         return START_NOT_STICKY;
-    }
-
-    public void stopAllTimers() {
-        for (ActiveTimer at : new java.util.ArrayList<>(activeTimers.values())) {
-            stopTimer(at.timer.timer.id);
-        }
     }
 
     @Nullable
@@ -155,6 +158,10 @@ public class TimerService extends Service {
     }
 
     public void startTimer(TimerWithSteps timer, int stepIndex) {
+        if (!hasStep(timer, stepIndex)) {
+            return;
+        }
+
         long timerId = timer.timer.id;
         ActiveTimer activeTimer = activeTimers.get(timerId);
         if (activeTimer != null) {
@@ -172,6 +179,9 @@ public class TimerService extends Service {
 
         if (activeTimer.timeLeftInMillis > 0) {
             runTimer(activeTimer);
+            for (TimerListener listener : listeners) {
+                listener.onStatusChanged(timerId);
+            }
         } else {
             activeTimer.timerRunning = false;
             for (TimerListener listener : listeners) {
@@ -182,6 +192,10 @@ public class TimerService extends Service {
     }
 
     private void runTimer(ActiveTimer activeTimer) {
+        if (activeTimer.timeLeftInMillis <= 0) {
+            return;
+        }
+
         if (activeTimer.countDownTimer != null) {
             activeTimer.countDownTimer.cancel();
             activeTimer.countDownTimer = null;
@@ -197,7 +211,9 @@ public class TimerService extends Service {
                 for (TimerListener listener : listeners) {
                     listener.onTick(timerId, millisUntilFinished);
                 }
-                updateNotification();
+                if (activeTimer == getNotificationTimer()) {
+                    updateNotification();
+                }
             }
 
             @Override
@@ -299,6 +315,47 @@ public class TimerService extends Service {
         }
     }
 
+    private void stopSelfIfNoTimers() {
+        if (activeTimers.isEmpty()) {
+            stopForeground(STOP_FOREGROUND_REMOVE);
+            stopSelf();
+        }
+    }
+
+    private void syncWithStoredTimers(java.util.List<TimerWithSteps> stored) {
+        for (ActiveTimer activeTimer : new java.util.ArrayList<>(activeTimers.values())) {
+            long timerId = activeTimer.timer.timer.id;
+            TimerWithSteps storedTimer = findStoredTimer(stored, timerId);
+            if (storedTimer == null) {
+                stopTimer(timerId);
+                continue;
+            }
+            if (!hasStep(storedTimer, activeTimer.currentStepIndex)) {
+                continue;
+            }
+
+            storedTimer.sortSteps();
+            activeTimer.timer = storedTimer;
+            for (TimerListener listener : listeners) {
+                listener.onStatusChanged(timerId);
+            }
+        }
+
+        if (!activeTimers.isEmpty()) {
+            updateNotification();
+        }
+    }
+
+    @Nullable
+    private static TimerWithSteps findStoredTimer(java.util.List<TimerWithSteps> stored, long timerId) {
+        for (TimerWithSteps storedTimer : stored) {
+            if (storedTimer.timer.id == timerId) {
+                return storedTimer;
+            }
+        }
+        return null;
+    }
+
     public void adjustTimer(long timerId, long deltaMillis) {
         ActiveTimer activeTimer = activeTimers.get(timerId);
         if (activeTimer == null) {
@@ -307,7 +364,6 @@ public class TimerService extends Service {
 
         if (activeTimer.isAlarmPlaying) {
             if (deltaMillis > 0) {
-                // Stop alarm and start next or same step with delta as initial time
                 stopAlarmOnly(timerId);
                 activeTimer.timeLeftInMillis = deltaMillis;
                 activeTimer.timerRunning = true;
@@ -316,7 +372,6 @@ public class TimerService extends Service {
                     listener.onStatusChanged(timerId);
                 }
             }
-            // Ignore minus when alarm is playing (should be hidden in UI anyway)
             return;
         }
 
@@ -345,15 +400,13 @@ public class TimerService extends Service {
     }
 
     private void checkAlarms() {
-        boolean anyAlarm = false;
-        for (ActiveTimer at : activeTimers.values()) {
-            if (at.isAlarmPlaying) {
-                anyAlarm = true;
-                break;
-            }
-        }
-        if (!anyAlarm) {
+        ActiveTimer notificationTimer = getNotificationTimer();
+        if (notificationTimer == null || !notificationTimer.isAlarmPlaying) {
             stopAlarm();
+            return;
+        }
+        if (notificationTimer.timer.timer.id != alarmNotificationTimerId) {
+            postAlarmNotification(notificationTimer);
         }
     }
 
@@ -367,6 +420,7 @@ public class TimerService extends Service {
 
     private void handleExactAlarmFired(long timerId, int stepIndex) {
         if (timerId <= 0 || stepIndex < 0) {
+            stopSelfIfNoTimers();
             return;
         }
 
@@ -383,7 +437,8 @@ public class TimerService extends Service {
             TimerWithSteps timer = AppDatabase.getDatabase(getApplicationContext())
                     .timerDao()
                     .getTimerWithStepsByIdSync(timerId);
-            if (timer == null || timer.steps == null || stepIndex >= timer.steps.size()) {
+            if (!hasStep(timer, stepIndex)) {
+                mainHandler.post(this::stopSelfIfNoTimers);
                 return;
             }
             timer.sortSteps();
@@ -422,15 +477,15 @@ public class TimerService extends Service {
         activeTimer.timerRunning = false;
         if (!activeTimer.isAlarmPlaying) {
             activeTimer.isAlarmPlaying = true;
-            playAlarm(activeTimer);
+            playAlarm();
         }
+        checkAlarms();
 
         for (TimerListener listener : listeners) {
             listener.onFinish(timerId);
         }
 
         startForeground(NOTIFICATION_ID, getNotification());
-        updateNotification();
     }
 
     private void scheduleExactAlarm(ActiveTimer activeTimer) {
@@ -518,6 +573,13 @@ public class TimerService extends Service {
         return currentStepIndex != expectedStepIndex;
     }
 
+    static boolean hasStep(TimerWithSteps timer, int stepIndex) {
+        return timer != null
+                && timer.steps != null
+                && stepIndex >= 0
+                && stepIndex < timer.steps.size();
+    }
+
     static String formatTimeLeft(long timeLeftInMillis) {
         long safeTimeLeft = Math.max(0, timeLeftInMillis);
         int hours = (int) (safeTimeLeft / 3600000);
@@ -534,11 +596,26 @@ public class TimerService extends Service {
         return timerRunning || !isAlarmPlaying && timeLeftInMillis > 0;
     }
 
-    private void playAlarm(ActiveTimer activeTimer) {
+    private void playAlarm() {
         this.playSound();
         this.vibrate();
         this.acquireAlarmWakeLock();
-        this.postAlarmNotification(activeTimer);
+        mainHandler.removeCallbacks(alarmTimeoutRunnable);
+        mainHandler.postDelayed(alarmTimeoutRunnable, ALARM_TIMEOUT_MILLIS);
+    }
+
+    private void timeOutAlarm() {
+        for (ActiveTimer activeTimer : new java.util.ArrayList<>(activeTimers.values())) {
+            if (!activeTimer.isAlarmPlaying) {
+                continue;
+            }
+            activeTimer.isAlarmPlaying = false;
+            for (TimerListener listener : listeners) {
+                listener.onStatusChanged(activeTimer.timer.timer.id);
+            }
+        }
+        checkAlarms();
+        updateNotification();
     }
 
     @SuppressWarnings("deprecation")
@@ -562,26 +639,45 @@ public class TimerService extends Service {
     }
 
     private void playSound() {
-        Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
-        if (notification == null) {
-            notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-        }
-        if (notification == null) {
-            notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+        if (alarmPlayer != null && alarmPlayer.isPlaying()) {
+            return;
         }
 
-        ringtone = RingtoneManager.getRingtone(getApplicationContext(), notification);
-        if (ringtone != null) {
-            AudioAttributes audioAttributes = new AudioAttributes.Builder()
+        Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
+        if (alarmSound == null) {
+            alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+        }
+        if (alarmSound == null) {
+            alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+        }
+        if (alarmSound == null) {
+            return;
+        }
+
+        MediaPlayer player = new MediaPlayer();
+        try {
+            player.setDataSource(this, alarmSound);
+            player.setAudioAttributes(new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_ALARM)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build();
-            ringtone.setAudioAttributes(audioAttributes);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                ringtone.setLooping(true);
-            }
-            ringtone.play();
+                    .build());
+            player.setLooping(true);
+            player.prepare();
+            player.start();
+            alarmPlayer = player;
+        } catch (IOException | IllegalArgumentException | IllegalStateException e) {
+            Log.w(TAG, "Could not play the alarm sound", e);
+            player.release();
         }
+    }
+
+    private void stopSound() {
+        if (alarmPlayer == null) {
+            return;
+        }
+        alarmPlayer.stop();
+        alarmPlayer.release();
+        alarmPlayer = null;
     }
 
     private void vibrate() {
@@ -611,9 +707,8 @@ public class TimerService extends Service {
     }
 
     private void stopAlarm() {
-        if (ringtone != null && ringtone.isPlaying()) {
-            ringtone.stop();
-        }
+        mainHandler.removeCallbacks(alarmTimeoutRunnable);
+        stopSound();
         if (vibrator != null) {
             vibrator.cancel();
         }
@@ -637,25 +732,13 @@ public class TimerService extends Service {
                 .build();
         NotificationManager manager = getSystemService(NotificationManager.class);
         manager.notify(ALARM_NOTIFICATION_ID, notification);
+        alarmNotificationTimerId = activeTimer.timer.timer.id;
     }
 
     private void cancelAlarmNotification() {
         NotificationManager manager = getSystemService(NotificationManager.class);
         manager.cancel(ALARM_NOTIFICATION_ID);
-    }
-
-    @Nullable
-    private ActiveTimer getFirstActiveTimer() {
-        ActiveTimer firstActiveTimer = null;
-        long firstTimerId = Long.MAX_VALUE;
-        for (java.util.Map.Entry<Long, ActiveTimer> entry : activeTimers.entrySet()) {
-            long timerId = entry.getKey();
-            if (timerId < firstTimerId) {
-                firstTimerId = timerId;
-                firstActiveTimer = entry.getValue();
-            }
-        }
-        return firstActiveTimer;
+        alarmNotificationTimerId = NO_ALARM_NOTIFICATION;
     }
 
     private void createNotificationChannel() {
@@ -688,12 +771,12 @@ public class TimerService extends Service {
     }
 
     private Notification getNotification() {
-        ActiveTimer actionTimer = getNotificationActionTimer();
+        ActiveTimer notificationTimer = getNotificationTimer();
 
         PendingIntent pendingIntent;
-        if (actionTimer != null) {
+        if (notificationTimer != null) {
             pendingIntent = buildTimerContentIntent(
-                    actionTimer.timer.timer.id,
+                    notificationTimer.timer.timer.id,
                     REQUEST_CODE_OFFSET_NOTIFICATION_CONTENT
             );
         } else {
@@ -707,9 +790,8 @@ public class TimerService extends Service {
         }
 
         String title = getString(R.string.app_name);
-        String contentText;
+        String contentText = null;
 
-        ActiveTimer notificationTimer = getFirstActiveTimer();
         if (notificationTimer != null) {
             title = notificationTimer.timer.timer.title;
             String timeStr = formatTimeLeft(notificationTimer.timeLeftInMillis);
@@ -723,13 +805,6 @@ public class TimerService extends Service {
             if (!notificationTimer.timerRunning && notificationTimer.timeLeftInMillis == 0) {
                 contentText = getString(R.string.label_time_is_up);
             }
-        } else {
-            int activeCount = activeTimers.size();
-            contentText = getResources().getQuantityString(
-                    R.plurals.notification_timers_active,
-                    activeCount,
-                    activeCount
-            );
         }
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
@@ -739,8 +814,17 @@ public class TimerService extends Service {
                 .setContentIntent(pendingIntent)
                 .setOnlyAlertOnce(true);
 
-        if (actionTimer != null) {
-            long timerId = actionTimer.timer.timer.id;
+        int activeCount = activeTimers.size();
+        if (activeCount > 1) {
+            builder.setSubText(getResources().getQuantityString(
+                    R.plurals.notification_timers_active,
+                    activeCount,
+                    activeCount
+            ));
+        }
+
+        if (notificationTimer != null) {
+            long timerId = notificationTimer.timer.timer.id;
 
             Intent pauseResumeIntent = new Intent(this, TimerService.class);
             pauseResumeIntent.setAction(ACTION_NOTIFICATION_TOGGLE_PAUSE_RESUME);
@@ -768,8 +852,8 @@ public class TimerService extends Service {
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
             );
 
-            int pauseResumeIcon = actionTimer.timerRunning ? R.drawable.ic_pause : R.drawable.ic_play;
-            int pauseResumeLabel = actionTimer.timerRunning ? R.string.action_pause : R.string.action_resume;
+            int pauseResumeIcon = notificationTimer.timerRunning ? R.drawable.ic_pause : R.drawable.ic_play;
+            int pauseResumeLabel = notificationTimer.timerRunning ? R.string.action_pause : R.string.action_resume;
             builder.addAction(pauseResumeIcon, getString(pauseResumeLabel), pauseResumePendingIntent)
                     .addAction(
                             R.drawable.ic_skip_next,
@@ -782,7 +866,7 @@ public class TimerService extends Service {
     }
 
     @Nullable
-    private ActiveTimer getNotificationActionTimer() {
+    private ActiveTimer getNotificationTimer() {
         if (activeTimers.isEmpty()) {
             return null;
         }
@@ -838,8 +922,13 @@ public class TimerService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        for (Long timerId : new java.util.ArrayList<>(activeTimers.keySet())) {
-            cancelExactAlarm(timerId);
+        storedTimers.removeObserver(storedTimersObserver);
+        for (ActiveTimer activeTimer : new java.util.ArrayList<>(activeTimers.values())) {
+            if (activeTimer.countDownTimer != null) {
+                activeTimer.countDownTimer.cancel();
+                activeTimer.countDownTimer = null;
+            }
+            cancelExactAlarm(activeTimer.timer.timer.id);
         }
         stopAlarm();
         recoveryExecutor.shutdownNow();
@@ -851,25 +940,5 @@ public class TimerService extends Service {
 
     public java.util.Collection<ActiveTimer> getAllActiveTimers() {
         return activeTimers.values();
-    }
-
-    @Deprecated
-    public TimerWithSteps getCurrentTimer() {
-        return activeTimers.isEmpty() ? null : activeTimers.values().iterator().next().timer;
-    }
-
-    @Deprecated
-    public int getCurrentStepIndex() {
-        return activeTimers.isEmpty() ? 0 : activeTimers.values().iterator().next().currentStepIndex;
-    }
-
-    @Deprecated
-    public long getTimeLeftInMillis() {
-        return activeTimers.isEmpty() ? 0 : activeTimers.values().iterator().next().timeLeftInMillis;
-    }
-
-    @Deprecated
-    public boolean isTimerRunning() {
-        return !activeTimers.isEmpty() && activeTimers.values().iterator().next().timerRunning;
     }
 }

@@ -17,7 +17,7 @@ public class TimerRepository {
     private final Application application;
     private final TimerDao timerDao;
     private final LiveData<List<TimerWithSteps>> allTimers;
-    private final ExecutorService executorService = Executors.newFixedThreadPool(4);
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     public TimerRepository(Application application) {
         this.application = application;
@@ -36,24 +36,11 @@ public class TimerRepository {
     }
 
     public void insert(Timer timer, List<TimerStep> steps) {
-        executorService.execute(() -> {
-            long timerId = timerDao.insertTimer(timer);
-            for (TimerStep step : steps) {
-                step.timerId = timerId;
-            }
-            timerDao.insertTimerSteps(steps);
-        });
+        executorService.execute(() -> timerDao.insertTimerWithSteps(timer, steps));
     }
 
     public void update(Timer timer, List<TimerStep> steps) {
-        executorService.execute(() -> {
-            timerDao.updateTimer(timer);
-            timerDao.deleteStepsForTimer(timer.id);
-            for (TimerStep step : steps) {
-                step.timerId = timer.id;
-            }
-            timerDao.insertTimerSteps(steps);
-        });
+        executorService.execute(() -> timerDao.replaceTimerWithSteps(timer, steps));
     }
 
     public void delete(Timer timer) {
@@ -61,19 +48,7 @@ public class TimerRepository {
     }
 
     public void duplicate(long timerId) {
-        executorService.execute(() -> {
-            TimerWithSteps original = timerDao.getTimerWithStepsByIdSync(timerId);
-            if (original != null) {
-                original.sortSteps();
-                Timer newTimer = new Timer(
-                        original.timer.title + application.getString(R.string.timer_copy_suffix),
-                        original.timer.description
-                );
-                long newId = timerDao.insertTimer(newTimer);
-                for (TimerStep step : original.steps) {
-                    timerDao.insertTimerStep(new TimerStep(newId, step.title, step.description, step.durationSeconds, step.stepOrder));
-                }
-            }
-        });
+        String titleSuffix = application.getString(R.string.timer_copy_suffix);
+        executorService.execute(() -> timerDao.duplicateTimer(timerId, titleSuffix));
     }
 }

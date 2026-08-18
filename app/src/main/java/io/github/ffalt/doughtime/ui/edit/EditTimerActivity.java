@@ -3,6 +3,7 @@ package io.github.ffalt.doughtime.ui.edit;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -122,7 +123,6 @@ public class EditTimerActivity extends AppCompatActivity {
             return windowInsets;
         });
 
-        // keep the last step scrollable clear of the pinned add-step bar
         addStepBar.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
             int barHeight = bottom - top;
             if (recyclerSteps.getPaddingBottom() != barHeight) {
@@ -147,10 +147,22 @@ public class EditTimerActivity extends AppCompatActivity {
     }
 
     private void saveTimer() {
-        String title = editTitle.getText().toString();
-        String description = editDescription.getText().toString();
+        String title = editTitle.getText().toString().trim();
+        String description = editDescription.getText().toString().trim();
         if (title.isEmpty()) {
+            Toast.makeText(this, R.string.error_timer_needs_title, Toast.LENGTH_SHORT).show();
             return;
+        }
+        if (stepsList.isEmpty()) {
+            Toast.makeText(this, R.string.error_timer_needs_step, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        for (int i = 0; i < stepsList.size(); i++) {
+            if (stepsList.get(i).durationSeconds <= 0) {
+                Toast.makeText(this, getString(R.string.error_step_needs_duration, i + 1),
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
         }
 
         for (int i = 0; i < stepsList.size(); i++) {

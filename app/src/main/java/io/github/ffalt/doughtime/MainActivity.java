@@ -38,7 +38,7 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
     private TimerAdapter adapter;
     private ActiveTimerAdapter activeAdapter;
     private TimerService timerService;
-    private boolean isBound = false;
+    private boolean bindRequested = false;
     private java.util.List<TimerWithSteps> allTimers;
 
     private RecyclerView recyclerActiveTimers;
@@ -50,7 +50,6 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
         public void onServiceConnected(ComponentName name, IBinder service) {
             TimerService.LocalBinder binder = (TimerService.LocalBinder) service;
             timerService = binder.getService();
-            isBound = true;
             timerService.addListener(MainActivity.this);
             updateTimersUI();
         }
@@ -59,9 +58,7 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
         public void onServiceDisconnected(ComponentName name) {
             Log.w(TAG, "TimerService disconnected unexpectedly: " + name);
             timerService = null;
-            isBound = false;
             updateTimersUI();
-            attemptServiceRebind();
         }
     };
 
@@ -125,9 +122,6 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
         }
     }
 
-    /**
-     * @return true if the permission dialog was requested, false if nothing was asked
-     */
     private boolean checkNotificationPermission() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
@@ -178,42 +172,37 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
         }
     }
 
-    private void attemptServiceRebind() {
-        if (!isFinishing() && !isDestroyed()) {
-            boolean rebound = bindService(new Intent(this, TimerService.class), connection, Context.BIND_AUTO_CREATE);
-            if (!rebound) {
-                Log.e(TAG, "Failed to rebind TimerService after unexpected disconnect");
-            }
-        }
-    }
-
     @Override
     protected void onStart() {
         super.onStart();
         Intent intent = new Intent(this, TimerService.class);
+        bindRequested = true;
         bindService(intent, connection, Context.BIND_AUTO_CREATE);
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        if (isBound) {
-            timerService.removeListener(this);
+        if (bindRequested) {
+            if (timerService != null) {
+                timerService.removeListener(this);
+            }
             unbindService(connection);
-            isBound = false;
+            bindRequested = false;
+            timerService = null;
         }
     }
 
     private void updateTimersUI() {
         if (timerService != null) {
             java.util.Collection<TimerService.ActiveTimer> activeTimers = timerService.getAllActiveTimers();
+            activeAdapter.submitList(activeTimers);
             if (activeTimers.isEmpty()) {
                 recyclerActiveTimers.setVisibility(View.GONE);
                 textActiveTimersLabel.setVisibility(View.GONE);
             } else {
                 recyclerActiveTimers.setVisibility(View.VISIBLE);
                 textActiveTimersLabel.setVisibility(View.VISIBLE);
-                activeAdapter.submitList(activeTimers);
             }
 
             if (allTimers != null) {
@@ -229,8 +218,6 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
                     }
                 }
                 adapter.submitList(filtered);
-
-                // Show "All Timers" title only if there are active timers AND non-active timers
                 if (!activeTimers.isEmpty() && !filtered.isEmpty()) {
                     textAllTimersLabel.setVisibility(View.VISIBLE);
                 } else {

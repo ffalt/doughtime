@@ -15,7 +15,7 @@ import java.util.List;
 
 @Dao
 public interface TimerDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     long insertTimer(Timer timer);
 
     @Update
@@ -24,10 +24,10 @@ public interface TimerDao {
     @Delete
     void deleteTimer(Timer timer);
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     void insertTimerStep(TimerStep step);
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     void insertTimerSteps(List<TimerStep> steps);
 
     @Query("DELETE FROM timer_steps WHERE timerId = :timerId")
@@ -43,4 +43,42 @@ public interface TimerDao {
 
     @Query("SELECT COUNT(*) FROM timers")
     int getTimerCount();
+
+    @Transaction
+    default void insertTimerWithSteps(Timer timer, List<TimerStep> steps) {
+        long timerId = insertTimer(timer);
+        for (TimerStep step : steps) {
+            step.timerId = timerId;
+        }
+        insertTimerSteps(steps);
+    }
+
+    @Transaction
+    default void replaceTimerWithSteps(Timer timer, List<TimerStep> steps) {
+        updateTimer(timer);
+        deleteStepsForTimer(timer.id);
+        for (TimerStep step : steps) {
+            step.timerId = timer.id;
+        }
+        insertTimerSteps(steps);
+    }
+
+    @Transaction
+    default void duplicateTimer(long timerId, String titleSuffix) {
+        TimerWithSteps original = getTimerWithStepsByIdSync(timerId);
+        if (original == null) {
+            return;
+        }
+        original.sortSteps();
+        long copyId = insertTimer(new Timer(original.timer.title + titleSuffix, original.timer.description));
+        for (TimerStep step : original.steps) {
+            insertTimerStep(new TimerStep(
+                    copyId,
+                    step.title,
+                    step.description,
+                    step.durationSeconds,
+                    step.stepOrder
+            ));
+        }
+    }
 }

@@ -23,6 +23,9 @@
     <string name="label_steps">Steps</string>
     <string name="action_add_step">Add step</string>
     <string name="action_save_timer">Save timer</string>
+    <string name="error_timer_needs_title">Enter a title</string>
+    <string name="error_timer_needs_step">Add at least one step</string>
+    <string name="error_step_needs_duration">Duration missing for step %1$d</string>
     <string name="hint_step_title">Step title</string>
     <string name="hint_step_duration">Duration</string>
     <string name="hint_step_description">Step description (optional)</string>

@@ -37,9 +37,6 @@ public class TimerStep {
         this.stepOrder = stepOrder;
     }
 
-    /**
-     * Title to show in the UI, falling back to a placeholder for untitled steps.
-     */
     @Ignore
     public String displayTitle() {
         return title == null || title.trim().isEmpty() ? "-" : title;

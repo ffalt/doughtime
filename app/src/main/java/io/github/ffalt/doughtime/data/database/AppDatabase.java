@@ -31,7 +31,6 @@ public abstract class AppDatabase extends RoomDatabase {
                     instance = Room.databaseBuilder(context.getApplicationContext(),
                                     AppDatabase.class, "dough_time_database")
                             .addCallback(new DatabaseCallback(context))
-                            .fallbackToDestructiveMigration(false)
                             .build();
                 }
             }

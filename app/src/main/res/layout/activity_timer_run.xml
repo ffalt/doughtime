@@ -250,6 +250,7 @@
             android:gravity="center"
             android:orientation="vertical"
             android:visibility="gone"
+            tools:ignore="UselessParent"
             tools:visibility="visible">
 
             <TextView
@@ -286,13 +287,6 @@
             </LinearLayout>
 
         </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/layout_active_controls"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone" />
 
     </LinearLayout>
 

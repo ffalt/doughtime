@@ -23,6 +23,9 @@
     <string name="label_steps">Schritte</string>
     <string name="action_add_step">Schritt hinzufügen</string>
     <string name="action_save_timer">Timer speichern</string>
+    <string name="error_timer_needs_title">Gib einen Titel ein</string>
+    <string name="error_timer_needs_step">Füge mindestens einen Schritt hinzu</string>
+    <string name="error_step_needs_duration">Dauer fehlt für Schritt %1$d</string>
     <string name="hint_step_title">Schritt-Titel</string>
     <string name="hint_step_duration">Dauer</string>
     <string name="hint_step_description">Schrittbeschreibung (optional)</string>

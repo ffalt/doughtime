@@ -28,7 +28,6 @@ DoughTime focuses on simplicity and reliability for sourdough fermentation timin
 | 🔔 **Notifications**      | Persistent background notifications keep you informed of timer progress                  |
 | 🔄 **Background Service** | Timers continue running even when the app is closed or screen is off                     |
 | 🎯 **Exact Alarms**       | Precise alarm scheduling ensures you never miss a step transition                        |
-| 💾 **Progress Tracking**  | Full timer state recovery - resume where you left off even after process restart         |
 | ⚡ **Quick Access**        | Fast, intuitive interface for starting and managing timers during baking                 |
 | 💾 **Persistent Storage** | All timer recipes and history stored locally on your device (no cloud required)          |
 | 🔒 **Privacy First**      | F-Droid compatible; no proprietary SDKs or tracking                                      |
