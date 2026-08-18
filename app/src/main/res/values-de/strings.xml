@@ -54,7 +54,6 @@
     <string name="action_open_settings">Einstellungen öffnen</string>
     <string name="action_pause">Pausieren</string>
     <string name="action_resume">Fortsetzen</string>
-    <string name="action_reset">Zurücksetzen</string>
     <string name="dialog_stop_timer_title">Timer stoppen?</string>
     <string name="dialog_stop_timer_message">Möchtest du den Timer wirklich stoppen?</string>
     <string name="dialog_stop_timer_positive">Stoppen</string>

@@ -4,7 +4,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -154,23 +153,11 @@ public class TimerRunActivity extends AppCompatActivity implements TimerService.
         }
     }
 
-    @SuppressWarnings("deprecation")
-    private void showWhenLockedFallback() {
-        getWindow().addFlags(
-                android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
-                        | android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
-        );
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            setShowWhenLocked(true);
-            setTurnScreenOn(true);
-        } else {
-            this.showWhenLockedFallback();
-        }
+        setShowWhenLocked(true);
+        setTurnScreenOn(true);
         setContentView(R.layout.activity_timer_run);
 
         timerId = getIntent().getLongExtra("TIMER_ID", -1);
