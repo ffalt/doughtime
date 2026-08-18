@@ -42,6 +42,7 @@
     <string name="label_ends_at">Ends at</string>
     <string name="label_time_is_up">Time\'s up!</string>
     <string name="notification_channel_timer_service">Timer Service Channel</string>
+    <string name="notification_channel_timer_alarm">Timer Alarm Channel</string>
     <string name="notification_status_paused_with_time">Paused: %1$s</string>
     <string name="notification_running_with_time">%1$s - %2$s</string>
     <plurals name="notification_timers_active">
@@ -50,6 +51,7 @@
     </plurals>
     <string name="action_start_next">Start next</string>
     <string name="action_close">Close</string>
+    <string name="action_open_settings">Open Settings</string>
     <string name="action_pause">Pause</string>
     <string name="action_resume">Resume</string>
     <string name="action_reset">Reset</string>
@@ -57,6 +59,10 @@
     <string name="dialog_stop_timer_message">Are you sure you want to stop the timer?</string>
     <string name="dialog_stop_timer_positive">Stop</string>
     <string name="dialog_stop_timer_negative">Cancel</string>
+
+    <!-- Permissions -->
+    <string name="permission_full_screen_intent_title">Alarm display permission</string>
+    <string name="permission_full_screen_intent_message">To show the timer alarm on the lock screen, DoughTime needs the "Full-screen notifications" permission. Please enable it in Settings.</string>
 
     <!-- Service -->
     <string name="fgs_subtype_sourdough_process_timer">Sourdough process timer</string>

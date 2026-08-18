@@ -11,6 +11,7 @@ import android.media.AudioAttributes;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
+import android.os.PowerManager;
 import android.os.VibrationAttributes;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
@@ -36,20 +37,22 @@ import java.util.concurrent.Executors;
 
 public class TimerService extends Service {
     private static final String CHANNEL_ID = "TimerServiceChannel";
+    private static final String ALARM_CHANNEL_ID = "TimerAlarmChannel";
     private static final int NOTIFICATION_ID = 1;
+    private static final int ALARM_NOTIFICATION_ID = 2;
     public static final String ACTION_STOP = "io.github.ffalt.doughtime.ACTION_STOP";
     public static final String ACTION_NOTIFICATION_TOGGLE_PAUSE_RESUME =
             "io.github.ffalt.doughtime.ACTION_NOTIFICATION_TOGGLE_PAUSE_RESUME";
     public static final String ACTION_NOTIFICATION_START_NEXT =
             "io.github.ffalt.doughtime.ACTION_NOTIFICATION_START_NEXT";
-    public static final String ACTION_NOTIFICATION_CLICK =
-            "io.github.ffalt.doughtime.ACTION_NOTIFICATION_CLICK";
     public static final String ACTION_EXACT_ALARM = "io.github.ffalt.doughtime.ACTION_EXACT_ALARM";
     public static final String ACTION_EXACT_ALARM_FIRED = "io.github.ffalt.doughtime.ACTION_EXACT_ALARM_FIRED";
     public static final String EXTRA_TIMER_ID = "io.github.ffalt.doughtime.EXTRA_TIMER_ID";
     public static final String EXTRA_STEP_INDEX = "io.github.ffalt.doughtime.EXTRA_STEP_INDEX";
     private static final int REQUEST_CODE_OFFSET_NOTIFICATION_PAUSE_RESUME = 10_000;
     private static final int REQUEST_CODE_OFFSET_NOTIFICATION_START_NEXT = 20_000;
+    private static final int REQUEST_CODE_OFFSET_NOTIFICATION_CONTENT = 30_000;
+    private static final int REQUEST_CODE_OFFSET_ALARM_CONTENT = 40_000;
 
     private final IBinder binder = new LocalBinder();
     private final java.util.Map<Long, ActiveTimer> activeTimers = new java.util.HashMap<>();
@@ -59,6 +62,7 @@ public class TimerService extends Service {
     private Ringtone ringtone;
     private Vibrator vibrator;
     private AlarmManager alarmManager;
+    private PowerManager.WakeLock alarmWakeLock;
 
     public interface TimerListener {
         void onTick(long timerId, long millisUntilFinished);
@@ -120,11 +124,6 @@ public class TimerService extends Service {
                 startNextTimerStep(timerId);
                 return START_NOT_STICKY;
             }
-            if (ACTION_NOTIFICATION_CLICK.equals(action)) {
-                long timerId = intent.getLongExtra(EXTRA_TIMER_ID, -1L);
-                handleNotificationClick(timerId);
-                return START_NOT_STICKY;
-            }
             if (ACTION_EXACT_ALARM_FIRED.equals(action)) {
                 long timerId = intent.getLongExtra(EXTRA_TIMER_ID, -1L);
                 int stepIndex = intent.getIntExtra(EXTRA_STEP_INDEX, -1);
@@ -164,6 +163,7 @@ public class TimerService extends Service {
                 activeTimer.countDownTimer = null;
             }
             activeTimer.isAlarmPlaying = false;
+            checkAlarms();
             cancelExactAlarm(timerId);
         }
 
@@ -422,7 +422,7 @@ public class TimerService extends Service {
         activeTimer.timerRunning = false;
         if (!activeTimer.isAlarmPlaying) {
             activeTimer.isAlarmPlaying = true;
-            playAlarm();
+            playAlarm(activeTimer);
         }
 
         for (TimerListener listener : listeners) {
@@ -534,9 +534,31 @@ public class TimerService extends Service {
         return timerRunning || !isAlarmPlaying && timeLeftInMillis > 0;
     }
 
-    private void playAlarm() {
+    private void playAlarm(ActiveTimer activeTimer) {
         this.playSound();
         this.vibrate();
+        this.acquireAlarmWakeLock();
+        this.postAlarmNotification(activeTimer);
+    }
+
+    @SuppressWarnings("deprecation")
+    private void acquireAlarmWakeLock() {
+        if (alarmWakeLock != null && alarmWakeLock.isHeld()) {
+            return;
+        }
+        PowerManager powerManager = getSystemService(PowerManager.class);
+        alarmWakeLock = powerManager.newWakeLock(
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                "doughtime:alarm"
+        );
+        alarmWakeLock.acquire(10_000L);
+    }
+
+    private void releaseAlarmWakeLock() {
+        if (alarmWakeLock != null && alarmWakeLock.isHeld()) {
+            alarmWakeLock.release();
+        }
+        alarmWakeLock = null;
     }
 
     private void playSound() {
@@ -595,15 +617,31 @@ public class TimerService extends Service {
         if (vibrator != null) {
             vibrator.cancel();
         }
+        releaseAlarmWakeLock();
+        cancelAlarmNotification();
     }
 
-    private void handleNotificationClick(long requestedTimerId) {
-        for (ActiveTimer at : activeTimers.values()) {
-            if (at.isAlarmPlaying) {
-                stopAlarmOnly(at.timer.timer.id);
-            }
-        }
-        updateNotification();
+    private void postAlarmNotification(ActiveTimer activeTimer) {
+        PendingIntent contentIntent = buildTimerContentIntent(
+                activeTimer.timer.timer.id,
+                REQUEST_CODE_OFFSET_ALARM_CONTENT
+        );
+        Notification notification = new NotificationCompat.Builder(this, ALARM_CHANNEL_ID)
+                .setContentTitle(activeTimer.timer.timer.title)
+                .setContentText(getString(R.string.label_time_is_up))
+                .setSmallIcon(R.drawable.ic_launcher)
+                .setContentIntent(contentIntent)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setOngoing(true)
+                .setFullScreenIntent(contentIntent, true)
+                .build();
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        manager.notify(ALARM_NOTIFICATION_ID, notification);
+    }
+
+    private void cancelAlarmNotification() {
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        manager.cancel(ALARM_NOTIFICATION_ID);
     }
 
     @Nullable
@@ -620,32 +658,44 @@ public class TimerService extends Service {
         return firstActiveTimer;
     }
 
-    private long getFirstActiveTimerId() {
-        ActiveTimer firstActiveTimer = getFirstActiveTimer();
-        return firstActiveTimer == null ? -1L : firstActiveTimer.timer.timer.id;
-    }
-
     private void createNotificationChannel() {
         NotificationChannel serviceChannel = new NotificationChannel(
                 CHANNEL_ID,
                 getString(R.string.notification_channel_timer_service),
                 NotificationManager.IMPORTANCE_LOW
         );
+        NotificationChannel alarmChannel = new NotificationChannel(
+                ALARM_CHANNEL_ID,
+                getString(R.string.notification_channel_timer_alarm),
+                NotificationManager.IMPORTANCE_HIGH
+        );
+        alarmChannel.setSound(null, null);
         NotificationManager manager = getSystemService(NotificationManager.class);
         manager.createNotificationChannel(serviceChannel);
+        manager.createNotificationChannel(alarmChannel);
+    }
+
+    private PendingIntent buildTimerContentIntent(long timerId, int requestCodeOffset) {
+        Intent timerIntent = new Intent(this, io.github.ffalt.doughtime.ui.timer.TimerRunActivity.class);
+        timerIntent.putExtra("TIMER_ID", timerId);
+        timerIntent.putExtra(io.github.ffalt.doughtime.ui.timer.TimerRunActivity.EXTRA_AUTO_START, false);
+        return TaskStackBuilder.create(this)
+                .addNextIntentWithParentStack(timerIntent)
+                .getPendingIntent(
+                        buildNotificationActionRequestCode(timerId, requestCodeOffset),
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                );
     }
 
     private Notification getNotification() {
-        long targetTimerId = getFirstActiveTimerId();
+        ActiveTimer actionTimer = getNotificationActionTimer();
 
         PendingIntent pendingIntent;
-        if (targetTimerId >= 0) {
-            Intent timerIntent = new Intent(this, io.github.ffalt.doughtime.ui.timer.TimerRunActivity.class);
-            timerIntent.putExtra("TIMER_ID", targetTimerId);
-            timerIntent.putExtra(io.github.ffalt.doughtime.ui.timer.TimerRunActivity.EXTRA_AUTO_START, false);
-            pendingIntent = TaskStackBuilder.create(this)
-                    .addNextIntentWithParentStack(timerIntent)
-                    .getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        if (actionTimer != null) {
+            pendingIntent = buildTimerContentIntent(
+                    actionTimer.timer.timer.id,
+                    REQUEST_CODE_OFFSET_NOTIFICATION_CONTENT
+            );
         } else {
             Intent mainIntent = new Intent(this, io.github.ffalt.doughtime.MainActivity.class);
             pendingIntent = PendingIntent.getActivity(
@@ -689,7 +739,6 @@ public class TimerService extends Service {
                 .setContentIntent(pendingIntent)
                 .setOnlyAlertOnce(true);
 
-        ActiveTimer actionTimer = getNotificationActionTimer();
         if (actionTimer != null) {
             long timerId = actionTimer.timer.timer.id;
 

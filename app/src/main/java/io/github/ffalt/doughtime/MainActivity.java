@@ -10,6 +10,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -30,6 +31,8 @@ import io.github.ffalt.doughtime.ui.timer.TimerRunActivity;
 public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTimerClickListener, TimerService.TimerListener {
     private static final String TAG = MainActivity.class.getSimpleName();
     private static final int REQUEST_CODE_POST_NOTIFICATIONS = 101;
+    private static final String PREFS_NAME = "doughtime_prefs";
+    private static final String PREF_ASKED_FULL_SCREEN_INTENT = "asked_full_screen_intent";
 
     private TimerViewModel viewModel;
     private TimerAdapter adapter;
@@ -117,14 +120,61 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
             return windowInsets;
         });
 
-        checkNotificationPermission();
+        if (!checkNotificationPermission()) {
+            checkFullScreenIntentPermission();
+        }
     }
 
-    private void checkNotificationPermission() {
+    /**
+     * @return true if the permission dialog was requested, false if nothing was asked
+     */
+    private boolean checkNotificationPermission() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 androidx.core.app.ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, REQUEST_CODE_POST_NOTIFICATIONS);
+                return true;
             }
+        }
+        return false;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_CODE_POST_NOTIFICATIONS) {
+            checkFullScreenIntentPermission();
+        }
+    }
+
+    private void checkFullScreenIntentPermission() {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            return;
+        }
+        android.app.NotificationManager nm = getSystemService(android.app.NotificationManager.class);
+        if (nm.canUseFullScreenIntent()) {
+            return;
+        }
+        android.content.SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        if (prefs.getBoolean(PREF_ASKED_FULL_SCREEN_INTENT, false)) {
+            return;
+        }
+        prefs.edit().putBoolean(PREF_ASKED_FULL_SCREEN_INTENT, true).apply();
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.permission_full_screen_intent_title)
+                .setMessage(R.string.permission_full_screen_intent_message)
+                .setPositiveButton(R.string.action_open_settings, (d, w) -> openFullScreenIntentSettings())
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    @androidx.annotation.RequiresApi(android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    private void openFullScreenIntentSettings() {
+        Intent intent = new Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT);
+        intent.setData(android.net.Uri.fromParts("package", getPackageName(), null));
+        try {
+            startActivity(intent);
+        } catch (android.content.ActivityNotFoundException e) {
+            Log.w(TAG, "No settings screen for the full screen intent permission", e);
         }
     }
 
