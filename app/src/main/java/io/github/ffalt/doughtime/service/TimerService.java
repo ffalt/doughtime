@@ -25,6 +25,7 @@ import android.os.SystemClock;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+import androidx.core.app.TaskStackBuilder;
 
 import io.github.ffalt.doughtime.R;
 import io.github.ffalt.doughtime.data.database.AppDatabase;
@@ -597,32 +598,12 @@ public class TimerService extends Service {
     }
 
     private void handleNotificationClick(long requestedTimerId) {
-        boolean alarmWasPlaying = false;
         for (ActiveTimer at : activeTimers.values()) {
             if (at.isAlarmPlaying) {
                 stopAlarmOnly(at.timer.timer.id);
-                alarmWasPlaying = true;
             }
         }
-
-        long targetTimerId = requestedTimerId;
-        if (targetTimerId < 0) {
-            targetTimerId = getFirstActiveTimerId();
-        }
-
-        Intent activityIntent;
-        if (targetTimerId >= 0) {
-            activityIntent = new Intent(this, io.github.ffalt.doughtime.ui.timer.TimerRunActivity.class);
-            activityIntent.putExtra("TIMER_ID", targetTimerId);
-        } else {
-            activityIntent = new Intent(this, io.github.ffalt.doughtime.MainActivity.class);
-        }
-        activityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        startActivity(activityIntent);
-
-        if (alarmWasPlaying) {
-            updateNotification();
-        }
+        updateNotification();
     }
 
     @Nullable
@@ -655,15 +636,25 @@ public class TimerService extends Service {
     }
 
     private Notification getNotification() {
-        Intent notificationIntent = new Intent(this, TimerService.class);
-        notificationIntent.setAction(ACTION_NOTIFICATION_CLICK);
-        notificationIntent.putExtra(EXTRA_TIMER_ID, getFirstActiveTimerId());
-        PendingIntent pendingIntent = PendingIntent.getService(
-                this,
-                0,
-                notificationIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
+        long targetTimerId = getFirstActiveTimerId();
+
+        PendingIntent pendingIntent;
+        if (targetTimerId >= 0) {
+            Intent timerIntent = new Intent(this, io.github.ffalt.doughtime.ui.timer.TimerRunActivity.class);
+            timerIntent.putExtra("TIMER_ID", targetTimerId);
+            timerIntent.putExtra(io.github.ffalt.doughtime.ui.timer.TimerRunActivity.EXTRA_AUTO_START, false);
+            pendingIntent = TaskStackBuilder.create(this)
+                    .addNextIntentWithParentStack(timerIntent)
+                    .getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        } else {
+            Intent mainIntent = new Intent(this, io.github.ffalt.doughtime.MainActivity.class);
+            pendingIntent = PendingIntent.getActivity(
+                    this,
+                    0,
+                    mainIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+        }
 
         String title = getString(R.string.app_name);
         String contentText;

@@ -32,7 +32,8 @@
         <activity
             android:name=".ui.edit.EditTimerActivity"
             android:label="@string/title_edit_timer" />
-        <activity android:name=".ui.timer.TimerRunActivity" />
+        <activity android:name=".ui.timer.TimerRunActivity"
+            android:parentActivityName=".MainActivity" />
         <service
             android:name=".service.TimerService"
             android:foregroundServiceType="specialUse"
