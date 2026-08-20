@@ -1,0 +1,3 @@
+ -  **android**  drop support for sdk < 27
+ -  **alarm**  implement full-screen intent for timer alarms and add permission checks
+ -  **notification**  2nd try; open timer activity on notification click

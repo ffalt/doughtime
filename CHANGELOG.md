@@ -1,4 +1,15 @@
 
+## [v0.0.9](https://github.com/ffalt/doughtime/compare/v0.0.9) (2026-08-20)
+
+### Features
+
+ -  **alarm**  implement full-screen intent for timer alarms and add permission checks ([b8b7fd83a3aecf4](https://github.com/ffalt/doughtime/commit/b8b7fd83a3aecf477e8e2f89b26d7b7cdb87ced6))
+
+### Bug Fixes
+
+ -  **android**  drop support for sdk < 27 ([0c56c1cd4b29a01](https://github.com/ffalt/doughtime/commit/0c56c1cd4b29a0158ed8679a15baf4a539cdfac0))
+ -  **notification**  2nd try; open timer activity on notification click ([b2fa1b84e89d81e](https://github.com/ffalt/doughtime/commit/b2fa1b84e89d81ee3fd075bce32704c3d9830783))
+
 ## [v0.0.8](https://github.com/ffalt/doughtime/compare/v0.0.8) (2026-08-10)
 
 ### Features
