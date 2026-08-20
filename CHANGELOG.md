@@ -1,4 +1,11 @@
 
+## [v0.0.10](https://github.com/ffalt/doughtime/compare/v0.0.10) (2026-08-20)
+
+
+### Bug Fixes
+
+ -  **timer screen**  adjust margin between buttons ([85d77a59c16675e](https://github.com/ffalt/doughtime/commit/85d77a59c16675e596740206a2bd1c22e66f6d88))
+
 ## [v0.0.9](https://github.com/ffalt/doughtime/compare/v0.0.9) (2026-08-20)
 
 ### Features
