@@ -1,19 +1,13 @@
-import se.bjurr.gitchangelog.api.InclusivenessStrategy
-import se.bjurr.gitchangelog.plugin.gradle.GitChangelogTask
-
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
     alias(libs.plugins.android.application) apply false
-    alias(libs.plugins.gitChangelog)
 }
-
-def checkstyleVersion = libs.versions.checkstyle.get()
 
 subprojects {
     apply plugin: 'checkstyle'
 
     checkstyle {
-        toolVersion = checkstyleVersion
+        toolVersion = libs.versions.checkstyle.get()
         configFile = rootProject.file("app/config/checkstyle/checkstyle.xml")
         ignoreFailures = true
         showViolations = true
@@ -39,9 +33,9 @@ subprojects {
 
         android {
             lint {
-                abortOnError = false
-                checkDependencies = true
-                checkReleaseBuilds = true
+                abortOnError false
+                checkDependencies true
+                checkReleaseBuilds true
                 lintConfig = file("lint.xml")
                 xmlReport = true
                 htmlReport = true
@@ -53,71 +47,49 @@ subprojects {
     }
 }
 
-// Template only for a single entry append (no global header)
-def templateChangelogEntryContent = """{{#tags}}
+static def gitOutput(List<String> cmd) {
+    def out = new StringBuffer()
+    def err = new StringBuffer()
+    def proc = cmd.execute()
+    proc.waitForProcessOutput(out, err)
+    if (proc.exitValue() != 0) {
+        throw new GradleException("Command failed: ${cmd.join(' ')}\n${err}")
+    }
+    return out.toString()
+}
 
-{{#ifEquals name "Unreleased"}}
-## Unreleased
-{{else}}
-## [{{name}}](https://github.com/ffalt/doughtime/compare/{{name}}) ({{tagDate .}})
-{{/ifEquals}}
+static def collectCommits(fromTag, toRevision) {
+    def pattern = ~/^(feat|fix)(?:\(([^)]*)\))?!?:\s*(.+)$/
+    return gitOutput(['git', 'log', '--no-merges', '--format=%H%x09%s', "${fromTag}..${toRevision}"])
+            .readLines()
+            *.trim()
+            .findAll { it }
+            .collect { line ->
+                def (hash, subject) = line.split('\t', 2)
+                def match = pattern.matcher(subject)
+                match.matches() ? [type: match.group(1), scope: match.group(2), description: match.group(3).trim(), hash: hash] : null
+            }
+            .findAll { it }
+}
 
-  {{#ifContainsType commits type='feat'}}
-### Features
+static def commitBullet(commit, boolean withLink) {
+    def scope = commit.scope ? "**${commit.scope}** " : ""
+    def link = withLink ? " ([${commit.hash.take(15)}](https://github.com/ffalt/starfield/commit/${commit.hash}))" : ""
+    return " - ${scope}${commit.description}${link}"
+}
 
-    {{#commits}}
-      {{#ifCommitType . type='feat'}}
- - {{#eachCommitScope .}} **{{.}}** {{/eachCommitScope}} {{{commitDescription .}}} ([{{hash}}](https://github.com/ffalt/doughtime/commit/{{hashFull}}))
-      {{/ifCommitType}}
-    {{/commits}}
-  {{/ifContainsType}}
-
-  {{#ifContainsType commits type='fix'}}
-### Bug Fixes
-
-    {{#commits}}
-      {{#ifCommitType . type='fix'}}
- - {{#eachCommitScope .}} **{{.}}** {{/eachCommitScope}} {{{commitDescription .}}} ([{{hash}}](https://github.com/ffalt/doughtime/commit/{{hashFull}}))
-      {{/ifCommitType}}
-    {{/commits}}
-  {{/ifContainsType}}
-{{/tags}}
-"""
-
-def templateReleaseLogContent = """{{#tags}}{{#ifContainsType commits type='feat'}}## Features
-
-    {{#commits}}
-      {{#ifCommitType . type='feat'}}
- - {{#eachCommitScope .}} **{{.}}** {{/eachCommitScope}} {{{commitDescription .}}} ([{{hash}}](https://github.com/ffalt/doughtime/commit/{{hashFull}}))
-      {{/ifCommitType}}
-    {{/commits}}
-  {{/ifContainsType}}
-  {{#ifContainsType commits type='fix'}}
-
-## Bug Fixes
-
-    {{#commits}}
-      {{#ifCommitType . type='fix'}}
- - {{#eachCommitScope .}} **{{.}}** {{/eachCommitScope}} {{{commitDescription .}}} ([{{hash}}](https://github.com/ffalt/doughtime/commit/{{hashFull}}))
-      {{/ifCommitType}}
-    {{/commits}}
-  {{/ifContainsType}}
-
-## Full Changelog
-
-https://github.com/ffalt/doughtime/compare/PREVIOUS...{{name}}
-{{/tags}}
-"""
-
-def templateFdroidChangelogContent = """{{#tags}}
-    {{#commits}}
-{{#ifCommitType . type='feat'}}
- - {{#eachCommitScope .}} **{{.}}** {{/eachCommitScope}} {{{commitDescription .}}}
-{{/ifCommitType}}{{#ifCommitType . type='fix'}}
- - {{#eachCommitScope .}} **{{.}}** {{/eachCommitScope}} {{{commitDescription .}}}
-{{/ifCommitType}}{{/commits}}
-{{/tags}}
-"""
+static def commitSections(commits, String heading, boolean withLinks) {
+    def text = new StringBuilder()
+    [feat: 'Features', fix: 'Bug Fixes'].each { type, title ->
+        def selected = commits.findAll { it.type == type }
+        if (selected) {
+            text.append("${heading} ${title}\n\n")
+            selected.each { text.append(commitBullet(it, withLinks)).append('\n') }
+            text.append('\n')
+        }
+    }
+    return text.toString()
+}
 
 static def calculateAndroidVersionCode(versionName) {
     def (major, minor, patch, build) = versionName.replace("v", "").tokenize('.')
@@ -125,162 +97,117 @@ static def calculateAndroidVersionCode(versionName) {
     return (major * 1000 * 1000 * 1000) + (minor * 1000 * 1000) + (patch * 1000) + build
 }
 
-tasks.register('gitReleaseNotesTask', GitChangelogTask) {
-    def currentVersion = project.version.toString()
-    def prevTagProvider = providers.exec {
-        commandLine 'bash', '-lc', "git tag --sort=-creatordate | grep -F -x -v \"${currentVersion}\" | head -n 1"
-    }.standardOutput.getAsText().map { it.trim() }
-
-    doFirst {
-        println "Generating Release notes for ${currentVersion} compared to ${prevTagProvider.get()}"
+static def findPreviousReleaseTag(version) {
+    def versionCode = calculateAndroidVersionCode(version)
+    def prevTag = ['git', 'tag', '--list', 'v*'].execute().text
+            .readLines()
+            *.trim()
+            .findAll { it ==~ /v\d+(\.\d+)*/ }
+            .findAll { calculateAndroidVersionCode(it) < versionCode }
+            .max { calculateAndroidVersionCode(it) }
+    if (!prevTag) {
+        throw new GradleException("No release tag below ${version} found. Cannot determine the changelog range.")
     }
-
-    toRevision.set(currentVersion)
-    fromRevisionStrategy.set(InclusivenessStrategy.EXCLUSIVE)
-    fromRevision.set(prevTagProvider)
-    file.set(project.file("RELEASE_NOTES.md"))
-    prependToFile.set(false) // false will replace the file, true will prepend content
-    templateContent.set(prevTagProvider.map { prev_tag ->
-        templateReleaseLogContent.replace("PREVIOUS", prev_tag)
-    })
+    return prevTag
 }
 
-tasks.register('gitChangelogTask', GitChangelogTask) {
-    def currentVersion = project.version.toString()
-    // Append only the new changes since the latest tag to the top of CHANGELOG.md
-    def prevTagProvider = providers.exec {
-        commandLine 'bash', '-lc', "git tag --sort=-creatordate | grep -F -x -v \"${currentVersion}\" | head -n 1"
-    }.standardOutput.getAsText().map { it.trim() }
+tasks.register('gitReleaseNotesTask') {
+    doLast {
+        def prevTag = findPreviousReleaseTag(project.version)
+        println "Generating Release notes for ${project.version} compared to ${prevTag}"
 
-    doFirst {
-        println "Update CHANGELOG.md ${currentVersion}"
+        def commits = collectCommits(prevTag, project.version)
+        new File("${rootDir}/RELEASE_NOTES.md").text = commitSections(commits, '##', true) +
+                "## Full Changelog\n\nhttps://github.com/ffalt/starfield/compare/${prevTag}...${project.version}\n"
     }
+}
 
-    fromRevision.set(prevTagProvider.map { tag ->
-        tag.isEmpty() ? "66b3d54098225d3738b73537fd5c7640bab594fa" : tag
-    })
-    fromRevisionStrategy.set(InclusivenessStrategy.EXCLUSIVE)
-    toRevision.set(currentVersion)
-    file.set(project.file("CHANGELOG.md"))
-    prependToFile.set(true)
-    templateContent.set(templateChangelogEntryContent)
+tasks.register('gitChangelogTask') {
+    doLast {
+        // Prepend only the new changes since the previous release to the top of CHANGELOG.md
+        def prevTag = findPreviousReleaseTag(project.version)
+        def commits = collectCommits(prevTag, project.version)
+        def tagDate = gitOutput(['git', 'log', '-1', '--format=%cs', project.version]).trim()
+        def entry = "## [${project.version}](https://github.com/ffalt/starfield/compare/${prevTag}...${project.version}) (${tagDate})\n\n" +
+                commitSections(commits, '###', true)
+
+        def changelogFile = new File("${rootDir}/CHANGELOG.md")
+        def existing = changelogFile.exists() ? changelogFile.text.replaceFirst(/^\s+/, '') : ''
+        changelogFile.text = entry + existing
+    }
 }
 
 tasks.register('bumpReleaseVersion') {
-    def currentVersion = project.version.toString()
-    def rootDirPath = rootDir.absolutePath
-    def execOps = services.get(ExecOperations)
-    doLast {
-        def statusOut = new ByteArrayOutputStream()
-        execOps.exec {
-            commandLine 'git', 'status', '--porcelain'
-            standardOutput = statusOut
-        }
-        if (!statusOut.toString().trim().isEmpty()) {
-            throw new GradleException('Git repository is dirty. Commit your changes first!')
-        }
-
-        // get next version
-        def (major, minor, patch) = currentVersion.replace("v", "").tokenize('.')
-        (major, minor, patch) = [major, minor, patch].collect { it.toInteger() }
-        def nextVersion = "v${major}.${minor}.${patch + 1}"
-
-        println("Bumping ${currentVersion} => ${nextVersion}")
-
-        // update file
-        def propsFile = new File(rootDirPath, "gradle.properties")
-        def propsText = propsFile.text.replace(currentVersion, nextVersion)
-        propsFile.text = propsText
-
-        // commit
-        execOps.exec {
-            commandLine 'git', 'add', 'gradle.properties'
-        }
-        execOps.exec {
-            commandLine 'git', 'commit', '-m', "Bump version to ${nextVersion}", '--no-gpg-sign'
-        }
-        // sign commit if needed or just use -s
-        execOps.exec {
-            commandLine 'git', 'commit', '--amend', '--no-edit', '--allow-empty', '-s'
-        }
+    def isClean = ['git', 'status', '--porcelain'].execute().text.trim().isEmpty()
+    if (!isClean) {
+        throw new GradleException('Git repository is dirty. Commit your changes first!')
     }
+
+    // get next version
+    def (major, minor, patch) = project.version.replace("v", "").tokenize('.')
+    (major, minor, patch) = [major, minor, patch].collect { it.toInteger() }
+    def nextVersion = "v${major}.${minor}.${patch + 1}"
+
+    println("Bumping ${project.version} => ${nextVersion}")
+
+    // update file
+    def propsFile = file("${rootDir}/gradle.properties")
+    def propsText = propsFile.text.replace(project.version, nextVersion)
+    propsFile.text = propsText
+
+    // commit
+    ['git', 'add', 'gradle.properties'].execute().waitFor()
+    ['git', 'commit', '-m', "Bump version to ${nextVersion}"].execute().waitFor()
+    // sign commit
+    'git commit --amend --no-edit --allow-empty -s'.execute() // sign commit
 }
 
 tasks.register('prepareReleaseTag') {
-    def currentVersion = project.version.toString()
-    def execOps = services.get(ExecOperations)
     doLast {
-        println("Adding temp tag ${currentVersion}")
-        execOps.exec {
-            commandLine 'git', 'tag', currentVersion
-        }
+        println("Adding temp tag ${project.version}")
+        ['git', 'tag', project.version].execute().waitFor()
     }
 }
 
 tasks.register('release') {
-    def currentVersion = project.version.toString()
-    def execOps = services.get(ExecOperations)
-    def versionCode = calculateAndroidVersionCode(currentVersion)
-    def fdroidRelPath = "fastlane/metadata/android/en-US/changelogs/${versionCode}.txt"
-    def fdroidFile = project.file(fdroidRelPath)
     dependsOn tasks.named('prepareReleaseTag'), tasks.named('gitChangelogTask'), tasks.named('gitFdroidChangelogTask')
 
     doLast {
-        println("Releasing ${currentVersion}")
+        println("Releasing ${project.version}")
         // remove temp tag
-        execOps.exec {
-            commandLine 'git', 'tag', '-d', currentVersion
-        }
+        ['git', 'tag', '-d', project.version].execute().waitFor()
         // add fdroid changelog files
         // compute the exact fdroid changelog file created earlier
-        if (fdroidFile.exists()) {
-            println("Adding F-Droid changelog ${fdroidRelPath} to git")
-            execOps.exec {
-                commandLine 'git', 'add', fdroidRelPath
-            }
-        } else {
-            println("Fdroid changelog not found at ${fdroidRelPath} - skipping add")
+        def versionCode = calculateAndroidVersionCode(project.version)
+        def fdroidRelPath = "fastlane/metadata/android/en-US/changelogs/${versionCode}.txt"
+        def fdroidFile = file(fdroidRelPath)
+        if (!fdroidFile.exists() || fdroidFile.text.trim().isEmpty()) {
+            throw new GradleException("No changelog entries generated for ${project.version} " +
+                    "(${fdroidRelPath} is empty). Restore the working tree and verify the previous release tag.")
         }
+        println("Adding F-Droid changelog ${fdroidRelPath} to git")
+        ['git', 'add', fdroidRelPath].execute().waitFor()
         // commit changelog
-        execOps.exec {
-            commandLine 'git', 'add', '-A'
-        }
-        execOps.exec {
-            commandLine 'git', 'commit', '-m', "Release ${currentVersion}", '--no-gpg-sign', '--allow-empty'
-        }
+        ['git', 'commit', '-a', '-m', "Release ${project.version}"].execute().waitFor()
         // sign commit
-        execOps.exec {
-            commandLine 'git', 'commit', '--amend', '--no-edit', '--allow-empty', '-s'
-        }
+        'git commit --amend --no-edit --allow-empty -s'.execute()
         // add final release tag
-        execOps.exec {
-            commandLine 'git', 'tag', currentVersion
-        }
-        println("To publish the commit and tag: git push --atomic origin main ${currentVersion}")
+        ['git', 'tag', project.version].execute().waitFor()
+        println("To publish the commit and tag: git push --atomic origin main ${project.version}")
     }
 }
 
-tasks.register('gitFdroidChangelogTask', GitChangelogTask) {
-    def currentVersion = project.version.toString()
-    def prevTagProvider = providers.exec {
-        commandLine 'bash', '-lc', "git tag --sort=-creatordate | grep -F -x -v \"${currentVersion}\" | head -n 1"
-    }.standardOutput.getAsText().map { it.trim() }
-
-    doFirst {
-        println("Update Fdroid changelogs ${currentVersion}")
-        file.get().parentFile.mkdirs()
+tasks.register('gitFdroidChangelogTask') {
+    doLast {
+        println("Update Fdroid changelogs ${project.version}")
+        def prevTag = findPreviousReleaseTag(project.version)
+        def commits = collectCommits(prevTag, project.version)
+        def versionCode = calculateAndroidVersionCode(project.version)
+        def target = new File("${rootDir}/fastlane/metadata/android/en-US/changelogs/${versionCode}.txt")
+        target.text = commits.collect { commitBullet(it, false) }.join('\n') + '\n'
     }
-
-    fromRevision.set(prevTagProvider.map { tag ->
-        tag.isEmpty() ? "440bdfdf94c09ef4edf1885b25852078a66d6332" : tag
-    })
-    fromRevisionStrategy.set(InclusivenessStrategy.EXCLUSIVE)
-    toRevision.set(currentVersion)
-    def versionCode = calculateAndroidVersionCode(currentVersion)
-    file.set(project.file("fastlane/metadata/android/en-US/changelogs/${versionCode}.txt"))
-    prependToFile.set(false)
-    templateContent.set(templateFdroidChangelogContent)
 }
 
 tasks.named('gitChangelogTask').configure { mustRunAfter tasks.named('prepareReleaseTag') }
 tasks.named('gitFdroidChangelogTask').configure { mustRunAfter tasks.named('prepareReleaseTag') }
+
