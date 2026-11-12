@@ -1,3 +1,9 @@
+## [v0.0.12](https://github.com/ffalt/starfield/compare/v0.0.11...v0.0.12) (2026-11-12)
+
+### Bug Fixes
+
+ - **notification** only use 1 notification ([6a3008ccf6a4e11](https://github.com/ffalt/starfield/commit/6a3008ccf6a4e114f7c6780347ef3ac6f7231a8d))
+
 ## [v0.0.11](https://github.com/ffalt/starfield/compare/v0.0.10...v0.0.11) (2026-11-12)
 
 ### Features
