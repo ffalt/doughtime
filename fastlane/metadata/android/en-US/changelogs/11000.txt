@@ -1,0 +1,3 @@
+ - **icons** add dedicated icon for the alarm
+ - **icons** add monochrome icon
+ - **notification** update notification channel IDs and icons

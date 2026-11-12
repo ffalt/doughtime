@@ -1,3 +1,10 @@
+## [v0.0.11](https://github.com/ffalt/starfield/compare/v0.0.10...v0.0.11) (2026-11-12)
+
+### Features
+
+ - **icons** add dedicated icon for the alarm ([de1cb26e1f4c021](https://github.com/ffalt/starfield/commit/de1cb26e1f4c02174f362dd2827c890438c67334))
+ - **icons** add monochrome icon ([02db3f02715de0a](https://github.com/ffalt/starfield/commit/02db3f02715de0ac648f992c3124f93ffc81affd))
+ - **notification** update notification channel IDs and icons ([7685b4dc4dc578f](https://github.com/ffalt/starfield/commit/7685b4dc4dc578fc59cae3f8461c7dab00b6781b))
 
 ## [v0.0.10](https://github.com/ffalt/doughtime/compare/v0.0.10) (2026-08-20)
 
