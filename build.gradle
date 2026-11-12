@@ -47,125 +47,130 @@ subprojects {
     }
 }
 
-static def gitOutput(List<String> cmd) {
-    def out = new StringBuffer()
-    def err = new StringBuffer()
-    def proc = cmd.execute()
-    proc.waitForProcessOutput(out, err)
-    if (proc.exitValue() != 0) {
-        throw new GradleException("Command failed: ${cmd.join(' ')}\n${err}")
-    }
-    return out.toString()
-}
+def releaseVersion = project.version.toString()
+def releaseRootDir = rootDir
 
-static def collectCommits(fromTag, toRevision) {
-    def pattern = ~/^(feat|fix)(?:\(([^)]*)\))?!?:\s*(.+)$/
-    return gitOutput(['git', 'log', '--no-merges', '--format=%H%x09%s', "${fromTag}..${toRevision}"])
-            .readLines()
-            *.trim()
-            .findAll { it }
-            .collect { line ->
-                def (hash, subject) = line.split('\t', 2)
-                def match = pattern.matcher(subject)
-                match.matches() ? [type: match.group(1), scope: match.group(2), description: match.group(3).trim(), hash: hash] : null
-            }
-            .findAll { it }
-}
-
-static def commitBullet(commit, boolean withLink) {
-    def scope = commit.scope ? "**${commit.scope}** " : ""
-    def link = withLink ? " ([${commit.hash.take(15)}](https://github.com/ffalt/starfield/commit/${commit.hash}))" : ""
-    return " - ${scope}${commit.description}${link}"
-}
-
-static def commitSections(commits, String heading, boolean withLinks) {
-    def text = new StringBuilder()
-    [feat: 'Features', fix: 'Bug Fixes'].each { type, title ->
-        def selected = commits.findAll { it.type == type }
-        if (selected) {
-            text.append("${heading} ${title}\n\n")
-            selected.each { text.append(commitBullet(it, withLinks)).append('\n') }
-            text.append('\n')
+class ReleaseGit {
+    static def gitOutput(List<String> cmd) {
+        def out = new StringBuffer()
+        def err = new StringBuffer()
+        def proc = cmd.execute()
+        proc.waitForProcessOutput(out, err)
+        if (proc.exitValue() != 0) {
+            throw new GradleException("Command failed: ${cmd.join(' ')}\n${out}${err}")
         }
+        return out.toString()
     }
-    return text.toString()
-}
 
-static def calculateAndroidVersionCode(versionName) {
-    def (major, minor, patch, build) = versionName.replace("v", "").tokenize('.')
-    (major, minor, patch, build) = [major, minor, patch, build].collect { it == null ? 0 : it.toInteger() }
-    return (major * 1000 * 1000 * 1000) + (minor * 1000 * 1000) + (patch * 1000) + build
-}
-
-static def findPreviousReleaseTag(version) {
-    def versionCode = calculateAndroidVersionCode(version)
-    def prevTag = ['git', 'tag', '--list', 'v*'].execute().text
-            .readLines()
-            *.trim()
-            .findAll { it ==~ /v\d+(\.\d+)*/ }
-            .findAll { calculateAndroidVersionCode(it) < versionCode }
-            .max { calculateAndroidVersionCode(it) }
-    if (!prevTag) {
-        throw new GradleException("No release tag below ${version} found. Cannot determine the changelog range.")
+    static def collectCommits(fromTag, toRevision) {
+        def pattern = ~/^(feat|fix)(?:\(([^)]*)\))?!?:\s*(.+)$/
+        return gitOutput(['git', 'log', '--no-merges', '--format=%H%x09%s', "${fromTag}..${toRevision}"])
+                .readLines()
+                *.trim()
+                .findAll { it }
+                .collect { line ->
+                    def (hash, subject) = line.split('\t', 2)
+                    def match = pattern.matcher(subject)
+                    match.matches() ? [type: match.group(1), scope: match.group(2), description: match.group(3).trim(), hash: hash] : null
+                }
+                .findAll { it }
     }
-    return prevTag
+
+    static def commitBullet(commit, boolean withLink) {
+        def scope = commit.scope ? "**${commit.scope}** " : ""
+        def link = withLink ? " ([${commit.hash.take(15)}](https://github.com/ffalt/starfield/commit/${commit.hash}))" : ""
+        return " - ${scope}${commit.description}${link}"
+    }
+
+    static def commitSections(commits, String heading, boolean withLinks) {
+        def text = new StringBuilder()
+        [feat: 'Features', fix: 'Bug Fixes'].each { type, title ->
+            def selected = commits.findAll { it.type == type }
+            if (selected) {
+                text.append("${heading} ${title}\n\n")
+                selected.each { text.append(commitBullet(it, withLinks)).append('\n') }
+                text.append('\n')
+            }
+        }
+        return text.toString()
+    }
+
+    static def calculateAndroidVersionCode(versionName) {
+        def (major, minor, patch, build) = versionName.replace("v", "").tokenize('.')
+        (major, minor, patch, build) = [major, minor, patch, build].collect { it == null ? 0 : it.toInteger() }
+        return (major * 1000 * 1000 * 1000) + (minor * 1000 * 1000) + (patch * 1000) + build
+    }
+
+    static def findPreviousReleaseTag(version) {
+        def versionCode = calculateAndroidVersionCode(version)
+        def prevTag = gitOutput(['git', 'tag', '--list', 'v*'])
+                .readLines()
+                *.trim()
+                .findAll { it ==~ /v\d+(\.\d+)*/ }
+                .findAll { calculateAndroidVersionCode(it) < versionCode }
+                .max { calculateAndroidVersionCode(it) }
+        if (!prevTag) {
+            throw new GradleException("No release tag below ${version} found. Cannot determine the changelog range.")
+        }
+        return prevTag
+    }
 }
 
 tasks.register('gitReleaseNotesTask') {
     doLast {
-        def prevTag = findPreviousReleaseTag(project.version)
-        println "Generating Release notes for ${project.version} compared to ${prevTag}"
+        def prevTag = ReleaseGit.findPreviousReleaseTag(releaseVersion)
+        println "Generating Release notes for ${releaseVersion} compared to ${prevTag}"
 
-        def commits = collectCommits(prevTag, project.version)
-        new File("${rootDir}/RELEASE_NOTES.md").text = commitSections(commits, '##', true) +
-                "## Full Changelog\n\nhttps://github.com/ffalt/starfield/compare/${prevTag}...${project.version}\n"
+        def commits = ReleaseGit.collectCommits(prevTag, releaseVersion)
+        new File(releaseRootDir, 'RELEASE_NOTES.md').text = ReleaseGit.commitSections(commits, '##', true) +
+                "## Full Changelog\n\nhttps://github.com/ffalt/starfield/compare/${prevTag}...${releaseVersion}\n"
     }
 }
 
 tasks.register('gitChangelogTask') {
     doLast {
         // Prepend only the new changes since the previous release to the top of CHANGELOG.md
-        def prevTag = findPreviousReleaseTag(project.version)
-        def commits = collectCommits(prevTag, project.version)
-        def tagDate = gitOutput(['git', 'log', '-1', '--format=%cs', project.version]).trim()
-        def entry = "## [${project.version}](https://github.com/ffalt/starfield/compare/${prevTag}...${project.version}) (${tagDate})\n\n" +
-                commitSections(commits, '###', true)
+        def prevTag = ReleaseGit.findPreviousReleaseTag(releaseVersion)
+        def commits = ReleaseGit.collectCommits(prevTag, releaseVersion)
+        def tagDate = ReleaseGit.gitOutput(['git', 'log', '-1', '--format=%cs', releaseVersion]).trim()
+        def entry = "## [${releaseVersion}](https://github.com/ffalt/starfield/compare/${prevTag}...${releaseVersion}) (${tagDate})\n\n" +
+                ReleaseGit.commitSections(commits, '###', true)
 
-        def changelogFile = new File("${rootDir}/CHANGELOG.md")
+        def changelogFile = new File(releaseRootDir, 'CHANGELOG.md')
         def existing = changelogFile.exists() ? changelogFile.text.replaceFirst(/^\s+/, '') : ''
         changelogFile.text = entry + existing
     }
 }
 
 tasks.register('bumpReleaseVersion') {
-    def isClean = ['git', 'status', '--porcelain'].execute().text.trim().isEmpty()
-    if (!isClean) {
-        throw new GradleException('Git repository is dirty. Commit your changes first!')
+    doLast {
+        if (!ReleaseGit.gitOutput(['git', 'status', '--porcelain']).trim().isEmpty()) {
+            throw new GradleException('Git repository is dirty. Commit your changes first!')
+        }
+
+        // get next version
+        def (major, minor, patch) = releaseVersion.replace("v", "").tokenize('.')
+        (major, minor, patch) = [major, minor, patch].collect { it.toInteger() }
+        def nextVersion = "v${major}.${minor}.${patch + 1}"
+
+        println("Bumping ${releaseVersion} => ${nextVersion}")
+
+        // update file
+        def propsFile = new File(releaseRootDir, 'gradle.properties')
+        propsFile.text = propsFile.text.replace(releaseVersion, nextVersion)
+
+        // commit
+        ReleaseGit.gitOutput(['git', 'add', 'gradle.properties'])
+        ReleaseGit.gitOutput(['git', 'commit', '-m', "Bump version to ${nextVersion}".toString()])
+        // sign commit
+        ReleaseGit.gitOutput(['git', 'commit', '--amend', '--no-edit', '--allow-empty', '-s'])
     }
-
-    // get next version
-    def (major, minor, patch) = project.version.replace("v", "").tokenize('.')
-    (major, minor, patch) = [major, minor, patch].collect { it.toInteger() }
-    def nextVersion = "v${major}.${minor}.${patch + 1}"
-
-    println("Bumping ${project.version} => ${nextVersion}")
-
-    // update file
-    def propsFile = file("${rootDir}/gradle.properties")
-    def propsText = propsFile.text.replace(project.version, nextVersion)
-    propsFile.text = propsText
-
-    // commit
-    ['git', 'add', 'gradle.properties'].execute().waitFor()
-    ['git', 'commit', '-m', "Bump version to ${nextVersion}"].execute().waitFor()
-    // sign commit
-    'git commit --amend --no-edit --allow-empty -s'.execute() // sign commit
 }
 
 tasks.register('prepareReleaseTag') {
     doLast {
-        println("Adding temp tag ${project.version}")
-        ['git', 'tag', project.version].execute().waitFor()
+        println("Adding temp tag ${releaseVersion}")
+        ReleaseGit.gitOutput(['git', 'tag', releaseVersion])
     }
 }
 
@@ -173,38 +178,38 @@ tasks.register('release') {
     dependsOn tasks.named('prepareReleaseTag'), tasks.named('gitChangelogTask'), tasks.named('gitFdroidChangelogTask')
 
     doLast {
-        println("Releasing ${project.version}")
+        println("Releasing ${releaseVersion}")
         // remove temp tag
-        ['git', 'tag', '-d', project.version].execute().waitFor()
+        ReleaseGit.gitOutput(['git', 'tag', '-d', releaseVersion])
         // add fdroid changelog files
         // compute the exact fdroid changelog file created earlier
-        def versionCode = calculateAndroidVersionCode(project.version)
+        def versionCode = ReleaseGit.calculateAndroidVersionCode(releaseVersion)
         def fdroidRelPath = "fastlane/metadata/android/en-US/changelogs/${versionCode}.txt"
-        def fdroidFile = file(fdroidRelPath)
+        def fdroidFile = new File(releaseRootDir, fdroidRelPath)
         if (!fdroidFile.exists() || fdroidFile.text.trim().isEmpty()) {
-            throw new GradleException("No changelog entries generated for ${project.version} " +
+            throw new GradleException("No changelog entries generated for ${releaseVersion} " +
                     "(${fdroidRelPath} is empty). Restore the working tree and verify the previous release tag.")
         }
         println("Adding F-Droid changelog ${fdroidRelPath} to git")
-        ['git', 'add', fdroidRelPath].execute().waitFor()
+        ReleaseGit.gitOutput(['git', 'add', fdroidRelPath.toString()])
         // commit changelog
-        ['git', 'commit', '-a', '-m', "Release ${project.version}"].execute().waitFor()
+        ReleaseGit.gitOutput(['git', 'commit', '-a', '-m', "Release ${releaseVersion}".toString()])
         // sign commit
-        'git commit --amend --no-edit --allow-empty -s'.execute()
+        ReleaseGit.gitOutput(['git', 'commit', '--amend', '--no-edit', '--allow-empty', '-s'])
         // add final release tag
-        ['git', 'tag', project.version].execute().waitFor()
-        println("To publish the commit and tag: git push --atomic origin main ${project.version}")
+        ReleaseGit.gitOutput(['git', 'tag', releaseVersion])
+        println("To publish the commit and tag: git push --atomic origin main ${releaseVersion}")
     }
 }
 
 tasks.register('gitFdroidChangelogTask') {
     doLast {
-        println("Update Fdroid changelogs ${project.version}")
-        def prevTag = findPreviousReleaseTag(project.version)
-        def commits = collectCommits(prevTag, project.version)
-        def versionCode = calculateAndroidVersionCode(project.version)
-        def target = new File("${rootDir}/fastlane/metadata/android/en-US/changelogs/${versionCode}.txt")
-        target.text = commits.collect { commitBullet(it, false) }.join('\n') + '\n'
+        println("Update Fdroid changelogs ${releaseVersion}")
+        def prevTag = ReleaseGit.findPreviousReleaseTag(releaseVersion)
+        def commits = ReleaseGit.collectCommits(prevTag, releaseVersion)
+        def versionCode = ReleaseGit.calculateAndroidVersionCode(releaseVersion)
+        def target = new File(releaseRootDir, "fastlane/metadata/android/en-US/changelogs/${versionCode}.txt")
+        target.text = commits.collect { ReleaseGit.commitBullet(it, false) }.join('\n') + '\n'
     }
 }
 
