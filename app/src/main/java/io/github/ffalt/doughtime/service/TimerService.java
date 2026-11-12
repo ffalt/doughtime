@@ -46,7 +46,6 @@ public class TimerService extends Service {
     private static final String LEGACY_CHANNEL_ID = "TimerServiceChannel";
     private static final String ALARM_CHANNEL_ID = "TimerAlarmChannel";
     private static final int NOTIFICATION_ID = 1;
-    private static final int ALARM_NOTIFICATION_ID = 2;
     public static final String ACTION_NOTIFICATION_TOGGLE_PAUSE_RESUME =
             "io.github.ffalt.doughtime.ACTION_NOTIFICATION_TOGGLE_PAUSE_RESUME";
     public static final String ACTION_NOTIFICATION_START_NEXT =
@@ -58,7 +57,6 @@ public class TimerService extends Service {
     private static final int REQUEST_CODE_OFFSET_NOTIFICATION_PAUSE_RESUME = 10_000;
     private static final int REQUEST_CODE_OFFSET_NOTIFICATION_START_NEXT = 20_000;
     private static final int REQUEST_CODE_OFFSET_NOTIFICATION_CONTENT = 30_000;
-    private static final int REQUEST_CODE_OFFSET_ALARM_CONTENT = 40_000;
     private static final long NO_ALARM_NOTIFICATION = -1L;
     private static final long ALARM_TIMEOUT_MILLIS = 600_000L;
 
@@ -408,16 +406,19 @@ public class TimerService extends Service {
             return;
         }
         if (notificationTimer.timer.timer.id != alarmNotificationTimerId) {
-            postAlarmNotification(notificationTimer);
+            alarmNotificationTimerId = notificationTimer.timer.timer.id;
+            startForeground(NOTIFICATION_ID, buildNotification(true));
         }
     }
 
     public void stopAlarmOnly(long timerId) {
         ActiveTimer activeTimer = activeTimers.get(timerId);
-        if (activeTimer != null) {
-            activeTimer.isAlarmPlaying = false;
+        if (activeTimer == null) {
+            return;
         }
+        activeTimer.isAlarmPlaying = false;
         checkAlarms();
+        updateNotification();
     }
 
     private void handleExactAlarmFired(long timerId, int stepIndex) {
@@ -481,13 +482,12 @@ public class TimerService extends Service {
             activeTimer.isAlarmPlaying = true;
             playAlarm();
         }
-        checkAlarms();
 
         for (TimerListener listener : listeners) {
             listener.onFinish(timerId);
         }
 
-        startForeground(NOTIFICATION_ID, getNotification());
+        checkAlarms();
     }
 
     private void scheduleExactAlarm(ActiveTimer activeTimer) {
@@ -715,31 +715,6 @@ public class TimerService extends Service {
             vibrator.cancel();
         }
         releaseAlarmWakeLock();
-        cancelAlarmNotification();
-    }
-
-    private void postAlarmNotification(ActiveTimer activeTimer) {
-        PendingIntent contentIntent = buildTimerContentIntent(
-                activeTimer.timer.timer.id,
-                REQUEST_CODE_OFFSET_ALARM_CONTENT
-        );
-        @SuppressLint("FullScreenIntentPolicy") Notification notification = new NotificationCompat.Builder(this, ALARM_CHANNEL_ID)
-                .setContentTitle(activeTimer.timer.timer.title)
-                .setContentText(getString(R.string.label_time_is_up))
-                .setSmallIcon(R.drawable.ic_notification_alarm)
-                .setContentIntent(contentIntent)
-                .setCategory(NotificationCompat.CATEGORY_ALARM)
-                .setOngoing(true)
-                .setFullScreenIntent(contentIntent, true)
-                .build();
-        NotificationManager manager = getSystemService(NotificationManager.class);
-        manager.notify(ALARM_NOTIFICATION_ID, notification);
-        alarmNotificationTimerId = activeTimer.timer.timer.id;
-    }
-
-    private void cancelAlarmNotification() {
-        NotificationManager manager = getSystemService(NotificationManager.class);
-        manager.cancel(ALARM_NOTIFICATION_ID);
         alarmNotificationTimerId = NO_ALARM_NOTIFICATION;
     }
 
@@ -775,7 +750,13 @@ public class TimerService extends Service {
     }
 
     private Notification getNotification() {
+        return buildNotification(false);
+    }
+
+    @SuppressLint("FullScreenIntentPolicy")
+    private Notification buildNotification(boolean announceAlarm) {
         ActiveTimer notificationTimer = getNotificationTimer();
+        boolean alarming = notificationTimer != null && notificationTimer.isAlarmPlaying;
 
         PendingIntent pendingIntent;
         if (notificationTimer != null) {
@@ -811,13 +792,24 @@ public class TimerService extends Service {
             }
         }
 
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(
+                this,
+                alarming ? ALARM_CHANNEL_ID : CHANNEL_ID
+        )
                 .setContentTitle(title)
                 .setContentText(contentText)
-                .setSmallIcon(R.drawable.ic_notification)
+                .setSmallIcon(alarming ? R.drawable.ic_notification_alarm : R.drawable.ic_notification)
                 .setContentIntent(pendingIntent)
                 .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-                .setOnlyAlertOnce(true);
+                .setOnlyAlertOnce(!announceAlarm);
+
+        if (alarming) {
+            builder.setCategory(NotificationCompat.CATEGORY_ALARM)
+                    .setOngoing(true);
+            if (announceAlarm) {
+                builder.setFullScreenIntent(pendingIntent, true);
+            }
+        }
 
         int activeCount = activeTimers.size();
         if (activeCount > 1) {
@@ -831,18 +823,29 @@ public class TimerService extends Service {
         if (notificationTimer != null) {
             long timerId = notificationTimer.timer.timer.id;
 
-            Intent pauseResumeIntent = new Intent(this, TimerService.class);
-            pauseResumeIntent.setAction(ACTION_NOTIFICATION_TOGGLE_PAUSE_RESUME);
-            pauseResumeIntent.putExtra(EXTRA_TIMER_ID, timerId);
-            PendingIntent pauseResumePendingIntent = PendingIntent.getService(
-                    this,
-                    buildNotificationActionRequestCode(
-                            timerId,
-                            REQUEST_CODE_OFFSET_NOTIFICATION_PAUSE_RESUME
-                    ),
-                    pauseResumeIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-            );
+            if (canTogglePauseResumeFromNotification(
+                    notificationTimer.timerRunning,
+                    notificationTimer.isAlarmPlaying,
+                    notificationTimer.timeLeftInMillis
+            )) {
+                Intent pauseResumeIntent = new Intent(this, TimerService.class);
+                pauseResumeIntent.setAction(ACTION_NOTIFICATION_TOGGLE_PAUSE_RESUME);
+                pauseResumeIntent.putExtra(EXTRA_TIMER_ID, timerId);
+                PendingIntent pauseResumePendingIntent = PendingIntent.getService(
+                        this,
+                        buildNotificationActionRequestCode(
+                                timerId,
+                                REQUEST_CODE_OFFSET_NOTIFICATION_PAUSE_RESUME
+                        ),
+                        pauseResumeIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                );
+                int pauseResumeIcon = notificationTimer.timerRunning ? R.drawable.ic_pause : R.drawable.ic_play;
+                int pauseResumeLabel = notificationTimer.timerRunning
+                        ? R.string.action_pause
+                        : R.string.action_resume;
+                builder.addAction(pauseResumeIcon, getString(pauseResumeLabel), pauseResumePendingIntent);
+            }
 
             Intent startNextIntent = new Intent(this, TimerService.class);
             startNextIntent.setAction(ACTION_NOTIFICATION_START_NEXT);
@@ -857,14 +860,11 @@ public class TimerService extends Service {
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
             );
 
-            int pauseResumeIcon = notificationTimer.timerRunning ? R.drawable.ic_pause : R.drawable.ic_play;
-            int pauseResumeLabel = notificationTimer.timerRunning ? R.string.action_pause : R.string.action_resume;
-            builder.addAction(pauseResumeIcon, getString(pauseResumeLabel), pauseResumePendingIntent)
-                    .addAction(
-                            R.drawable.ic_skip_next,
-                            getString(R.string.action_start_next),
-                            startNextPendingIntent
-                    );
+            builder.addAction(
+                    R.drawable.ic_skip_next,
+                    getString(R.string.action_start_next),
+                    startNextPendingIntent
+            );
         }
 
         return builder.build();
