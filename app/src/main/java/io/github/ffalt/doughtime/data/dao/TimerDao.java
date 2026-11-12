@@ -13,6 +13,7 @@ import io.github.ffalt.doughtime.data.entity.TimerStep;
 import io.github.ffalt.doughtime.data.entity.TimerWithSteps;
 import java.util.List;
 
+@SuppressWarnings("DefaultAnnotationParam")
 @Dao
 public interface TimerDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)

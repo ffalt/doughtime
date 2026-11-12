@@ -23,7 +23,7 @@ public class TimerStepAdapter extends RecyclerView.Adapter<TimerStepAdapter.Step
     private static final Object PAYLOAD_STEP_NUMBER = new Object();
 
     public interface OnStartDragListener {
-        void onStartDrag(@NonNull RecyclerView.ViewHolder viewHolder);
+        void onStartDrag(@SuppressWarnings("unused") @NonNull RecyclerView.ViewHolder viewHolder);
     }
 
     private final List<TimerStep> steps;
@@ -80,7 +80,6 @@ public class TimerStepAdapter extends RecyclerView.Adapter<TimerStepAdapter.Step
         private final TextView textStepNumber;
         private final EditText editTitle;
         private final EditText editDuration;
-        private final TextInputLayout layoutDuration;
         private final EditText editDescription;
         private TimerStep currentStep;
         private boolean binding;
@@ -90,7 +89,7 @@ public class TimerStepAdapter extends RecyclerView.Adapter<TimerStepAdapter.Step
             textStepNumber = itemView.findViewById(R.id.text_step_number);
             editTitle = itemView.findViewById(R.id.edit_step_title);
             editDuration = itemView.findViewById(R.id.edit_step_duration);
-            layoutDuration = itemView.findViewById(R.id.layout_step_duration);
+            TextInputLayout layoutDuration = itemView.findViewById(R.id.layout_step_duration);
             editDescription = itemView.findViewById(R.id.edit_step_description);
             ImageButton buttonRemove = itemView.findViewById(R.id.button_remove_step);
             ImageView imageDragHandle = itemView.findViewById(R.id.image_drag_handle);

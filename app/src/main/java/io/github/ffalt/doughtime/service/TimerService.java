@@ -1,5 +1,6 @@
 package io.github.ffalt.doughtime.service;
 
+import android.annotation.SuppressLint;
 import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -159,7 +160,7 @@ public class TimerService extends Service {
     }
 
     public void startTimer(TimerWithSteps timer, int stepIndex) {
-        if (!hasStep(timer, stepIndex)) {
+        if (hasNoStep(timer, stepIndex)) {
             return;
         }
 
@@ -331,7 +332,7 @@ public class TimerService extends Service {
                 stopTimer(timerId);
                 continue;
             }
-            if (!hasStep(storedTimer, activeTimer.currentStepIndex)) {
+            if (hasNoStep(storedTimer, activeTimer.currentStepIndex)) {
                 continue;
             }
 
@@ -438,7 +439,7 @@ public class TimerService extends Service {
             TimerWithSteps timer = AppDatabase.getDatabase(getApplicationContext())
                     .timerDao()
                     .getTimerWithStepsByIdSync(timerId);
-            if (!hasStep(timer, stepIndex)) {
+            if (hasNoStep(timer, stepIndex)) {
                 mainHandler.post(this::stopSelfIfNoTimers);
                 return;
             }
@@ -574,11 +575,11 @@ public class TimerService extends Service {
         return currentStepIndex != expectedStepIndex;
     }
 
-    static boolean hasStep(TimerWithSteps timer, int stepIndex) {
-        return timer != null
-                && timer.steps != null
-                && stepIndex >= 0
-                && stepIndex < timer.steps.size();
+    static boolean hasNoStep(TimerWithSteps timer, int stepIndex) {
+        return timer == null
+                || timer.steps == null
+                || stepIndex < 0
+                || stepIndex >= timer.steps.size();
     }
 
     static String formatTimeLeft(long timeLeftInMillis) {
@@ -722,7 +723,7 @@ public class TimerService extends Service {
                 activeTimer.timer.timer.id,
                 REQUEST_CODE_OFFSET_ALARM_CONTENT
         );
-        Notification notification = new NotificationCompat.Builder(this, ALARM_CHANNEL_ID)
+        @SuppressLint("FullScreenIntentPolicy") Notification notification = new NotificationCompat.Builder(this, ALARM_CHANNEL_ID)
                 .setContentTitle(activeTimer.timer.timer.title)
                 .setContentText(getString(R.string.label_time_is_up))
                 .setSmallIcon(R.drawable.ic_notification_alarm)

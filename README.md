@@ -24,11 +24,11 @@ DoughTime focuses on simplicity and reliability for sourdough fermentation timin
 | Category                  | What you get                                                                             |
 |---------------------------|------------------------------------------------------------------------------------------|
 | 📋 **Custom Timers**      | Create multi-step timer recipes with custom names and durations                          |
-| ⏱️ **Step Management**    | Organize fermentation into logical steps (bulk fermentation, shaping, final proof, etc.) |
+| ⏱️ **Step Management**     | Organize fermentation into logical steps (bulk fermentation, shaping, final proof, etc.) |
 | 🔔 **Notifications**      | Persistent background notifications keep you informed of timer progress                  |
 | 🔄 **Background Service** | Timers continue running even when the app is closed or screen is off                     |
 | 🎯 **Exact Alarms**       | Precise alarm scheduling ensures you never miss a step transition                        |
-| ⚡ **Quick Access**        | Fast, intuitive interface for starting and managing timers during baking                 |
+| ⚡ **Quick Access**       | Fast, intuitive interface for starting and managing timers during baking                 |
 | 💾 **Persistent Storage** | All timer recipes and history stored locally on your device (no cloud required)          |
 | 🔒 **Privacy First**      | F-Droid compatible; no proprietary SDKs or tracking                                      |
 
