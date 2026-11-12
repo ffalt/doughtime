@@ -41,7 +41,8 @@ import java.util.concurrent.Executors;
 
 public class TimerService extends Service {
     private static final String TAG = TimerService.class.getSimpleName();
-    private static final String CHANNEL_ID = "TimerServiceChannel";
+    private static final String CHANNEL_ID = "TimerServiceChannelV2";
+    private static final String LEGACY_CHANNEL_ID = "TimerServiceChannel";
     private static final String ALARM_CHANNEL_ID = "TimerAlarmChannel";
     private static final int NOTIFICATION_ID = 1;
     private static final int ALARM_NOTIFICATION_ID = 2;
@@ -724,7 +725,7 @@ public class TimerService extends Service {
         Notification notification = new NotificationCompat.Builder(this, ALARM_CHANNEL_ID)
                 .setContentTitle(activeTimer.timer.timer.title)
                 .setContentText(getString(R.string.label_time_is_up))
-                .setSmallIcon(R.drawable.ic_launcher)
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentIntent(contentIntent)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setOngoing(true)
@@ -745,8 +746,9 @@ public class TimerService extends Service {
         NotificationChannel serviceChannel = new NotificationChannel(
                 CHANNEL_ID,
                 getString(R.string.notification_channel_timer_service),
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_DEFAULT
         );
+        serviceChannel.setSound(null, null);
         NotificationChannel alarmChannel = new NotificationChannel(
                 ALARM_CHANNEL_ID,
                 getString(R.string.notification_channel_timer_alarm),
@@ -754,6 +756,7 @@ public class TimerService extends Service {
         );
         alarmChannel.setSound(null, null);
         NotificationManager manager = getSystemService(NotificationManager.class);
+        manager.deleteNotificationChannel(LEGACY_CHANNEL_ID);
         manager.createNotificationChannel(serviceChannel);
         manager.createNotificationChannel(alarmChannel);
     }
@@ -810,8 +813,9 @@ public class TimerService extends Service {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle(title)
                 .setContentText(contentText)
-                .setSmallIcon(R.drawable.ic_launcher)
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentIntent(pendingIntent)
+                .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
                 .setOnlyAlertOnce(true);
 
         int activeCount = activeTimers.size();
