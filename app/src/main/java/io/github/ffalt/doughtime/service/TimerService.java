@@ -84,8 +84,8 @@ public class TimerService extends Service {
     }
 
     public static class ActiveTimer {
+        public final int currentStepIndex;
         public TimerWithSteps timer;
-        public int currentStepIndex;
         public long timeLeftInMillis;
         public boolean timerRunning;
         public CountDownTimer countDownTimer;
@@ -725,7 +725,7 @@ public class TimerService extends Service {
         Notification notification = new NotificationCompat.Builder(this, ALARM_CHANNEL_ID)
                 .setContentTitle(activeTimer.timer.timer.title)
                 .setContentText(getString(R.string.label_time_is_up))
-                .setSmallIcon(R.drawable.ic_notification)
+                .setSmallIcon(R.drawable.ic_notification_alarm)
                 .setContentIntent(contentIntent)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setOngoing(true)
